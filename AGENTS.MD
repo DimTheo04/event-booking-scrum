@@ -2,9 +2,21 @@
 
 ## 1. Project Overview
 This is a project for an Event Booking web application. It features a three-tier user system:
-- **Attendees (Επισκέπτες):** Can search events, follow organizers, and RSVP.
-- **Organizers (Διοργανωτές):** Can create events, manage RSVPs, and send announcements.
-- **Admins (Διαχειριστές):** Can approve/reject events, manage users, and send global announcements.
+
+Main roles:
+- **Attendee / Visitor**: browse public events, view event details, RSVP, cancel RSVP, follow organizers, and view in-app notifications.
+- **Organizer**: create events, view RSVP dashboard data, and manage announcements.
+- **Admin**: approve or reject events, manage users, and send global platform announcements.
+
+Core flows:
+- Signup and login
+- Event creation by organizers
+- Admin approval before publication
+- Public event browsing and filtering
+- RSVP and RSVP cancellation
+- Follow organizers and receive notifications
+- Organizer dashboard
+- Admin moderation and user management
 
 ## 2. Tech Stack & Tools
 - **Framework:** Next.js (App Router strictly - `app/` directory).
@@ -41,6 +53,7 @@ The database is NoSQL. Agents must respect this structure:
   - Fields: `userId`, `type`, `message`, `read`, `createdAt`.
 
 ## 5. Security & Flow Constraints
-- **Event Visibility:** Public users and Attendees can ONLY fetch events where `status == 'approved'`.
-- **RSVP Logic:** Before writing an RSVP to the sub-collection, the app must check if `rsvpCount < capacity` (if capacity exists).
+- **Event Visibility:** Public users and Attendees can ONLY fetch events where `status == 'approved'`. New events posted by organizers start with a `pending` status.
+- **RSVP Logic:** Only logged in users can make RSVP. Before writing an RSVP to the sub-collection, the app must check if `rsvpCount < capacity` (if capacity exists). Also completed or cancelled events can't accept new RSVP
 - **Admin Actions:** Admin status is verified by checking the user's document in the `users` collection.
+- **Notifications:** Notifications are only in-app.
