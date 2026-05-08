@@ -80,9 +80,9 @@ export default function RegisterPage() {
   if (success) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md text-center">
-          <h2 className="text-2xl font-bold text-green-600 mb-4">Registration Successful!</h2>
-          <p className="text-gray-600 mb-6">
+        <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-sm border border-slate-200 text-center">
+          <h2 className="text-2xl font-bold text-brand-dark mb-4">Registration Successful!</h2>
+          <p className="text-slate-600 mb-6">
             Please check your inbox to verify your email address. You must verify your email before you can sign in.
           </p>
           <Button onClick={() => router.push("/login")} className="w-full">
@@ -94,13 +94,25 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8 p-8 bg-white rounded-lg shadow-md">
-        <div>
-          <h2 className="text-center text-3xl font-extrabold text-gray-900">
-            Create an account
-          </h2>
+    <div className="flex min-h-screen bg-gray-50 flex-col md:flex-row">
+      {/* Brand Panel - Hidden on mobile, visible on desktop */}
+      <div className="hidden md:flex md:w-1/2 bg-brand-dark flex-col justify-center p-12 text-white">
+        <div className="max-w-lg mx-auto">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight">Join Us Today.</h1>
+          <p className="text-lg text-brand-light leading-relaxed">
+            Create an account to RSVP for events, follow your favorite organizers, and never miss out.
+          </p>
         </div>
+      </div>
+
+      {/* Form Panel */}
+      <div className="flex flex-1 flex-col items-center justify-center p-4 sm:p-8 lg:p-12">
+        <div className="w-full max-w-md space-y-8 p-8 bg-white rounded-xl shadow-sm border border-slate-200">
+          <div>
+            <h2 className="text-center text-3xl font-bold text-brand-dark">
+              Create an account
+            </h2>
+          </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -178,13 +190,14 @@ export default function RegisterPage() {
             </Button>
           </form>
         </Form>
-        <p className="text-center text-sm text-gray-600 mt-4">
+        <p className="text-center text-sm text-slate-600 mt-4">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+          <Link href="/login" className="font-medium text-brand-orange hover:opacity-80 transition-opacity">
             Log in
           </Link>
         </p>
       </div>
+    </div>
     </div>
   );
 }
