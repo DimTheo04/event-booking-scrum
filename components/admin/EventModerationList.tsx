@@ -108,7 +108,14 @@ export default function EventModerationList() {
                       <span>{event.location}</span>
                     </div>
                   </div>
-                  <div className="text-sm text-slate-500 mt-2">
+                  
+                  {event.description && (
+                    <p className="text-sm text-slate-600 mt-3 italic line-clamp-2 border-l-2 border-brand-light pl-3">
+                      "{event.description}"
+                    </p>
+                  )}
+
+                  <div className="text-sm text-slate-500 mt-3">
                     <p><strong>Category:</strong> {event.category}</p>
                     <p><strong>Price:</strong> {event.price > 0 ? `€${event.price}` : 'Free'}</p>
                     <p><strong>Capacity:</strong> {event.capacity || 'Unlimited'}</p>

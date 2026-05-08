@@ -23,7 +23,7 @@ export default function CreateEventPage() {
   }
 
   return (
-    <div className="p-8 lg:p-12">
+    <div className="p-6 md:p-8 lg:p-12">
       <div className="max-w-4xl mx-auto">
         <EventCreateForm organizerId={organizerId} />
       </div>

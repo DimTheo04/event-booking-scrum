@@ -123,6 +123,7 @@ An Admin can:
 
 - The event details page must display the following required information:
   - Event title
+  - Event description
   - Organizer
   - Location
   - Date and time

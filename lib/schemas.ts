@@ -18,6 +18,7 @@ export type SignInFormValues = z.infer<typeof signInSchema>;
 
 export const eventCreationSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters long." }),
+  description: z.string().min(10, { message: "Description must be at least 10 characters long." }),
   location: z.string().min(3, { message: "Location is required." }),
   category: z.string().min(1, { message: "Please select a category." }),
   dateTime: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date and time." }),
