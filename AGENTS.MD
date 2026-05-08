@@ -16,7 +16,7 @@ Core flows:
 - RSVP and RSVP cancellation
 - Follow organizers and receive notifications
 - Organizer dashboard
-- Admin moderation and user management
+- Admin moderation and user management.
 
 ## 2. Tech Stack & Tools
 - **Framework:** Next.js (App Router strictly - `app/` directory).
