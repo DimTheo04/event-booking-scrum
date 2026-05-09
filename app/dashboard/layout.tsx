@@ -66,13 +66,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navLinks = [
     { href: "/dashboard", icon: UserIcon, label: "Profile" },
-    ...(userData.role === "organizer" ? [
+    ...(userData.role?.toLowerCase() === "organizer" ? [
       { href: "/dashboard/events", icon: CalendarDays, label: "My Events" },
       { href: "/dashboard/events/create", icon: PlusCircle, label: "Create Event" },
       { href: "/dashboard/announcements", icon: Megaphone, label: "Announcements" }
     ] : []),
-    ...(userData.role === "admin" ? [
-      { href: "/dashboard/admin/events", icon: CalendarDays, label: "Event Moderation" },
+    ...(userData.role?.toLowerCase() === "admin" ? [
+      { href: "/dashboard/admin/events", icon: CalendarDays, label: "Admin Approvals" },
       { href: "/dashboard/admin/users", icon: UserIcon, label: "Manage Users" }
     ] : [])
   ];

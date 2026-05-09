@@ -17,6 +17,7 @@ export async function createEvent(data: EventCreationFormValues, organizerId: st
     // As per PRD, new events start with 'pending' status
     const newEvent = {
       ...data,
+      capacity: data.capacity === undefined ? null : data.capacity,
       organizerId,
       status: "pending",
       rsvpCount: 0,

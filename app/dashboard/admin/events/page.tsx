@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import EventModerationList from "@/components/admin/EventModerationList";
+import PendingEventsTable from "./PendingEventsTable";
 
 export default function AdminEventsPage() {
   const router = useRouter();
@@ -35,7 +35,9 @@ export default function AdminEventsPage() {
           </p>
         </div>
 
-        <EventModerationList />
+        {/* Εδώ βάλαμε τον δικό σου πίνακα! */}
+        <PendingEventsTable />
+
       </div>
     </div>
   );
