@@ -3,18 +3,18 @@ import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, s
 
 export interface AnnouncementData {
   id?: string;
-  organizerId: string;
+  authorId: string;
   title: string;
   message: string;
   createdAt: any;
   updatedAt?: any;
 }
 
-export async function createAnnouncement(organizerId: string, title: string, message: string) {
+export async function createAnnouncement(authorId: string, title: string, message: string) {
   try {
     const announcementsRef = collection(db, "announcements");
     const newAnnouncement = {
-      organizerId,
+      authorId,
       title,
       message,
       createdAt: serverTimestamp(),
@@ -27,10 +27,10 @@ export async function createAnnouncement(organizerId: string, title: string, mes
   }
 }
 
-export async function getOrganizerAnnouncements(organizerId: string) {
+export async function getOrganizerAnnouncements(authorId: string) {
   try {
     const announcementsRef = collection(db, "announcements");
-    const q = query(announcementsRef, where("organizerId", "==", organizerId));
+    const q = query(announcementsRef, where("authorId", "==", authorId));
     const querySnapshot = await getDocs(q);
     
     const announcements: AnnouncementData[] = [];

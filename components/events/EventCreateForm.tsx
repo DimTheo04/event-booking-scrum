@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { eventCreationSchema, type EventCreationFormValues } from "@/lib/schemas";
 import { createEvent } from "@/lib/services/events";
 import { useRouter } from "next/navigation";
@@ -27,12 +28,14 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+
+
 export default function EventCreateForm({ organizerId }: { organizerId: string }) {
   const router = useRouter();
   const [isSuccess, setIsSuccess] = useState(false);
 
   const form = useForm<EventCreationFormValues>({
-    resolver: zodResolver(eventCreationSchema),
+    resolver: zodResolver(eventCreationSchema) as any,
     defaultValues: {
       title: "",
       description: "",
@@ -98,10 +101,10 @@ export default function EventCreateForm({ organizerId }: { organizerId: string }
                 <FormItem className="md:col-span-2">
                   <FormLabel className="text-sm font-semibold text-slate-700">Event Title</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="E.g., Summer Music Festival" 
+                    <Input
+                      placeholder="E.g., Summer Music Festival"
                       className="bg-white border-slate-300 focus:ring-brand-orange/30 rounded-md transition-colors"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -116,10 +119,10 @@ export default function EventCreateForm({ organizerId }: { organizerId: string }
                 <FormItem className="md:col-span-2">
                   <FormLabel className="text-sm font-semibold text-slate-700">Description</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Describe what the event is about..." 
-                      className="resize-y min-h-[100px] bg-white border-slate-300 focus:ring-brand-orange/30 rounded-md text-sm transition-colors" 
-                      {...field} 
+                    <Textarea
+                      placeholder="Describe what the event is about..."
+                      className="resize-y min-h-[100px] bg-white border-slate-300 focus:ring-brand-orange/30 rounded-md text-sm transition-colors"
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -162,10 +165,10 @@ export default function EventCreateForm({ organizerId }: { organizerId: string }
                   <FormControl>
                     <div className="relative">
                       <CalendarDays className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
-                      <Input 
-                        type="datetime-local" 
-                        className="pl-9 w-full bg-white border-slate-300 focus:ring-brand-orange/30 rounded-md transition-colors text-sm" 
-                        {...field} 
+                      <Input
+                        type="datetime-local"
+                        className="pl-9 w-full bg-white border-slate-300 focus:ring-brand-orange/30 rounded-md transition-colors text-sm"
+                        {...field}
                       />
                     </div>
                   </FormControl>
@@ -181,10 +184,10 @@ export default function EventCreateForm({ organizerId }: { organizerId: string }
                 <FormItem className="md:col-span-2">
                   <FormLabel className="text-sm font-semibold text-slate-700">Location</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="E.g., Central Park, NY" 
+                    <Input
+                      placeholder="E.g., Central Park, NY"
                       className="bg-white border-slate-300 focus:ring-brand-orange/30 rounded-md transition-colors"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -199,13 +202,13 @@ export default function EventCreateForm({ organizerId }: { organizerId: string }
                 <FormItem>
                   <FormLabel className="text-sm font-semibold text-slate-700">Price (€)</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
-                      step="0.01" 
-                      min="0" 
-                      placeholder="0.00" 
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
                       className="bg-white border-slate-300 focus:ring-brand-orange/30 rounded-md transition-colors"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
