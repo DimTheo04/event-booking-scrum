@@ -32,7 +32,7 @@ export default function DashboardLayout({
 
   const navLinks = [
     { href: "/dashboard", icon: UserIcon, label: "Profile" },
-    ...(role === "organizer" || role === "admin"
+    ...(role === "organizer"
       ? [
           {
             href: "/dashboard/events",

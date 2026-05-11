@@ -6,7 +6,7 @@ import RSVPTracker from "@/components/dashboard/RSVPTracker";
 export default function EventsDashboardPage() {
   const { user } = useAuth();
 
-  // Parent layout (organizer) guard ensures only organizer/admin reach here.
+  // Parent layout (organizer) guard ensures only organizers reach here.
   if (!user) return null;
 
   return (

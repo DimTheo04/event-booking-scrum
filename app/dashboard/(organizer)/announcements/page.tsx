@@ -6,7 +6,7 @@ import AnnouncementManager from "@/components/dashboard/AnnouncementManager";
 export default function AnnouncementsPage() {
   const { user } = useAuth();
 
-  // Parent (organizer) layout guard ensures only organizer/admin reach here.
+  // Parent (organizer) layout guard ensures only organizers reach here.
   if (!user) return null;
 
   return (

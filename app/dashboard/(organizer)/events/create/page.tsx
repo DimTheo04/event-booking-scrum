@@ -6,7 +6,7 @@ import EventCreateForm from "@/components/events/EventCreateForm";
 export default function CreateEventPage() {
   const { user } = useAuth();
 
-  // Parent (organizer) layout guard ensures only organizer/admin reach here.
+  // Parent (organizer) layout guard ensures only organizers reach here.
   if (!user) return null;
 
   return (
