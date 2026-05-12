@@ -320,7 +320,7 @@ export default function EventDiscovery() {
                     typeof event.capacity === "number" && event.capacity > 0;
                   const availability = hasCapacity
                     ? `${rsvpCount} / ${event.capacity}`
-                    : `${rsvpCount} RSVPs`;
+                    : "Unlimited";
 
                   return (
                     <article
