@@ -24,6 +24,13 @@ export default function Home() {
             </Button>
           </Link>
         </div>
+
+        <Link
+          href="/events"
+          className="inline-block text-sm font-medium text-brand-orange underline underline-offset-4 hover:opacity-80 transition-opacity"
+        >
+          Continue as guest
+        </Link>
       </div>
     </div>
   );

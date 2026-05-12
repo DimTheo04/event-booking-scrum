@@ -2,6 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { FirebaseError } from "firebase/app";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { signInSchema, type SignInFormValues } from "@/lib/schemas";
@@ -50,16 +51,17 @@ export default function LoginPage() {
 
       // Success, redirect to dashboard
       router.push("/dashboard");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Login error:", err);
       
       let errorMessage = "Invalid email or password.";
+      const errorCode = err instanceof FirebaseError ? err.code : "";
       
-      if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password" || err.code === "auth/user-not-found") {
+      if (errorCode === "auth/invalid-credential" || errorCode === "auth/wrong-password" || errorCode === "auth/user-not-found") {
         errorMessage = "Invalid email or password. Please check your credentials.";
-      } else if (err.code === "auth/too-many-requests") {
+      } else if (errorCode === "auth/too-many-requests") {
         errorMessage = "Too many failed login attempts. Please try again later.";
-      } else if (err.code === "auth/user-disabled") {
+      } else if (errorCode === "auth/user-disabled") {
         errorMessage = "This account has been disabled.";
       }
 
@@ -131,11 +133,19 @@ export default function LoginPage() {
           </form>
         </Form>
         <p className="text-center text-sm text-slate-600 mt-4">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link href="/register" className="font-medium text-brand-orange hover:opacity-80 transition-opacity">
             Sign up
           </Link>
         </p>
+        <div className="text-center">
+          <Link
+            href="/events"
+            className="text-sm font-medium text-brand-orange underline underline-offset-4 hover:opacity-80 transition-opacity"
+          >
+            Continue as guest
+          </Link>
+        </div>
       </div>
     </div>
     </div>
