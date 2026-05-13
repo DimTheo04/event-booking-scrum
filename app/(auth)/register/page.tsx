@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { FirebaseError } from "firebase/app";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -66,13 +67,18 @@ export default function RegisterPage() {
       });
 
       setSuccess(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Signup error:", err);
+      const errorCode = err instanceof FirebaseError ? err.code : "";
       // Simplify Firebase error messages or show as-is
-      if (err.code === "auth/email-already-in-use") {
+      if (errorCode === "auth/email-already-in-use") {
         setError("This email is already in use.");
       } else {
-        setError(err.message || "An error occurred during sign up.");
+        setError(
+          err instanceof Error
+            ? err.message
+            : "An error occurred during sign up."
+        );
       }
     }
   }
@@ -196,6 +202,14 @@ export default function RegisterPage() {
             Log in
           </Link>
         </p>
+        <div className="text-center">
+          <Link
+            href="/events"
+            className="text-sm font-medium text-brand-orange underline underline-offset-4 hover:opacity-80 transition-opacity"
+          >
+            Continue as guest
+          </Link>
+        </div>
       </div>
     </div>
     </div>

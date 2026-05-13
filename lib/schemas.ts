@@ -27,3 +27,21 @@ export const eventCreationSchema = z.object({
 });
 
 export type EventCreationFormValues = z.infer<typeof eventCreationSchema>;
+
+const dateFilterSchema = z
+  .string()
+  .trim()
+  .regex(/^$|^\d{4}-\d{2}-\d{2}$/, {
+    message: "Please enter a valid date.",
+  });
+
+export const eventDiscoveryFilterSchema = z.object({
+  search: z.string().trim().max(100).default(""),
+  category: z.string().trim().max(80).default("all"),
+  startDate: dateFilterSchema.default(""),
+  endDate: dateFilterSchema.default(""),
+});
+
+export type EventDiscoveryFilterValues = z.infer<
+  typeof eventDiscoveryFilterSchema
+>;
