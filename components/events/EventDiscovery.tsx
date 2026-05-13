@@ -20,6 +20,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import EventDetailsModal from "@/components/events/EventDetailsModal";
 import { useAuth } from "@/context/AuthContext";
 import { auth } from "@/lib/firebase";
 import {
@@ -73,6 +74,7 @@ export default function EventDiscovery() {
   const [events, setEvents] = useState<DiscoverableEventData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [filters, setFilters] =
     useState<EventDiscoveryFilterValues>(defaultFilters);
 
@@ -133,6 +135,8 @@ export default function EventDiscovery() {
     sanitizedFilters.category !== "all" ||
     sanitizedFilters.startDate !== "" ||
     sanitizedFilters.endDate !== "";
+  const selectedEvent =
+    events.find((event) => event.id === selectedEventId) ?? null;
 
   function updateFilter(
     key: keyof EventDiscoveryFilterValues,
@@ -147,6 +151,14 @@ export default function EventDiscovery() {
   async function handleSignOut() {
     await signOut(auth);
     router.push("/login");
+  }
+
+  function openEventDetails(event: DiscoverableEventData) {
+    setSelectedEventId(event.id ?? null);
+  }
+
+  function closeEventDetails() {
+    setSelectedEventId(null);
   }
 
   const role = userData?.role?.toLowerCase();
@@ -389,7 +401,16 @@ export default function EventDiscovery() {
                   return (
                     <article
                       key={event.id}
-                      className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow"
+                      className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => openEventDetails(event)}
+                      onKeyDown={(keyboardEvent) => {
+                        if (keyboardEvent.key === "Enter" || keyboardEvent.key === " ") {
+                          keyboardEvent.preventDefault();
+                          openEventDetails(event);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
                     >
                       <div className="p-5 border-b border-slate-100 flex justify-between items-start">
                         <div>
@@ -465,6 +486,14 @@ export default function EventDiscovery() {
           </div>
         </div>
       </main>
+
+      {selectedEvent && (
+        <EventDetailsModal
+          event={selectedEvent}
+          organizerInfo={{ displayName: selectedEvent.organizerName }}
+          onClose={closeEventDetails}
+        />
+      )}
     </div>
   );
 }

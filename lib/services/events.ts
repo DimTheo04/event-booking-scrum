@@ -15,18 +15,18 @@ import { EventCreationFormValues } from "@/lib/schemas";
 
 type EventStatus = "pending" | "approved" | "rejected" | "completed" | "cancelled";
 
-export interface EventData extends EventCreationFormValues {
+export type EventData = Omit<EventCreationFormValues, "capacity"> & {
   id?: string;
+  capacity?: number | null;
   organizerId: string;
   status: EventStatus;
   rsvpCount: number;
   rejectReason?: string;
   createdAt?: { toMillis?: () => number } | null;
-}
+};
 
-export type DiscoverableEventData = Omit<EventData, "capacity"> & {
+export type DiscoverableEventData = EventData & {
   organizerName: string;
-  capacity?: number | null;
 };
 
 function getTimestampMillis(value: unknown) {
