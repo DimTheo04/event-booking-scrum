@@ -97,6 +97,14 @@ function formatDateTimeInput(dateTime: string) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+function getMinDateTimeLocalValue() {
+  const now = new Date();
+  now.setSeconds(0, 0);
+
+  const timezoneOffsetMs = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - timezoneOffsetMs).toISOString().slice(0, 16);
+}
+
 function buildEditValues(event: EventDetailsModalEvent): EventUpdateValues {
   return {
     description: event.description,
@@ -157,9 +165,18 @@ export default function EventDetailsModal({
   const organizerEmail = organizerInfo?.email;
   const hasCapacity = typeof event.capacity === "number" && event.capacity > 0;
   const isFull = hasCapacity && event.rsvpCount >= event.capacity!;
-  const canEdit = canManage && event.status !== "cancelled" && event.status !== "rejected";
-  const canCancel = canManage && event.status !== "cancelled" && event.status !== "rejected";
+  const canEdit =
+    canManage &&
+    event.status !== "cancelled" &&
+    event.status !== "rejected" &&
+    event.status !== "completed";
+  const canCancel =
+    canManage &&
+    event.status !== "cancelled" &&
+    event.status !== "rejected" &&
+    event.status !== "completed";
   const rsvpButtonLabel = isRsvped ? "Cancel RSVP" : "RSVP";
+  const minDateTime = getMinDateTimeLocalValue();
 
   function handleEditChange<K extends keyof EventUpdateValues>(
     field: K,
@@ -320,13 +337,15 @@ export default function EventDetailsModal({
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">Date & Time</label>
               {isEditing ? (
-                <div className="event-edit-datetime">
+                <div className="event-edit-datetime relative">
                   <Input
                     type="datetime-local"
+                    min={minDateTime}
                     value={editValues.dateTime}
                     onChange={(e) => handleEditChange("dateTime", e.target.value)}
                     className="pr-10"
                   />
+                  <CalendarDays className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                 </div>
               ) : (
                 <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
@@ -523,7 +542,11 @@ export default function EventDetailsModal({
         }
 
         .event-edit-datetime input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+          background: initial;
+          color: initial;
+          cursor: pointer;
           left: auto;
+          opacity: 1;
           right: 0.75rem;
           top: 50%;
           bottom: auto;

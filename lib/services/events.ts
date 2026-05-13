@@ -11,8 +11,10 @@ import {
   getDoc,
   updateDoc,
   runTransaction,
+  writeBatch,
 } from "firebase/firestore";
 import {
+  eventCreationSchema,
   EventCreationFormValues,
   rsvpActionSchema,
   rsvpLookupSchema,
@@ -68,6 +70,48 @@ function getEventTime(dateTime: string) {
   return Number.isNaN(eventTime) ? null : eventTime;
 }
 
+function isPastEvent(event: EventData, now = Date.now()) {
+  const eventTime = getEventTime(event.dateTime);
+  return eventTime !== null && eventTime <= now;
+}
+
+function isFutureDateTime(value: string) {
+  const eventTime = getEventTime(value);
+  return eventTime !== null && eventTime > Date.now();
+}
+
+async function markPastApprovedEventsCompleted(events: EventData[]) {
+  const now = Date.now();
+  const pastApprovedEvents = events.filter(
+    (event) => event.id && event.status === "approved" && isPastEvent(event, now)
+  );
+
+  if (pastApprovedEvents.length === 0) {
+    return events;
+  }
+
+  const batch = writeBatch(db);
+  pastApprovedEvents.forEach((event) => {
+    batch.update(doc(db, "events", event.id!), { status: "completed" });
+  });
+
+  try {
+    await batch.commit();
+  } catch (error) {
+    console.warn(
+      "Past approved events were marked completed locally, but Firestore denied the status update:",
+      getFirebaseErrorMessage(error)
+    );
+  }
+
+  const completedEventIds = new Set(pastApprovedEvents.map((event) => event.id));
+  return events.map((event) =>
+    event.id && completedEventIds.has(event.id)
+      ? { ...event, status: "completed" as const }
+      : event
+  );
+}
+
 async function getOrganizerName(
   organizerId: string,
   organizerCache: Map<string, string>
@@ -103,7 +147,9 @@ const eventUpdateSchema = z.object({
   description: z.string().min(10, { message: "Description must be at least 10 characters long." }),
   location: z.string().min(3, { message: "Location is required." }),
   category: z.string().min(1, { message: "Please select a category." }),
-  dateTime: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date and time." }),
+  dateTime: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date and time." }).refine(isFutureDateTime, {
+    message: "Event date and time must be in the future.",
+  }),
   price: z.coerce.number().min(0, { message: "Price cannot be negative." }),
   capacity: z.coerce
     .number()
@@ -118,6 +164,10 @@ const eventUpdateSchema = z.object({
 export type EventUpdateValues = z.infer<typeof eventUpdateSchema>;
 
 function getFirebaseErrorMessage(error: unknown) {
+  if (error instanceof z.ZodError) {
+    return error.issues[0]?.message ?? "Please review the event details and try again.";
+  }
+
   if (
     typeof error === "object" &&
     error !== null &&
@@ -137,12 +187,13 @@ function getFirebaseErrorMessage(error: unknown) {
 
 export async function createEvent(data: EventCreationFormValues, organizerId: string) {
   try {
+    const validatedData = eventCreationSchema.parse(data);
     const eventsRef = collection(db, "events");
     
     // As per PRD, new events start with 'pending' status
     const newEvent = {
-      ...data,
-      capacity: data.capacity === undefined ? null : data.capacity,
+      ...validatedData,
+      capacity: validatedData.capacity === undefined ? null : validatedData.capacity,
       organizerId,
       status: "pending",
       rsvpCount: 0,
@@ -153,7 +204,7 @@ export async function createEvent(data: EventCreationFormValues, organizerId: st
     return { success: true, id: docRef.id };
   } catch (error) {
     console.error("Error creating event:", error);
-    return { success: false, error };
+    return { success: false, error, message: getFirebaseErrorMessage(error) };
   }
 }
 
@@ -166,11 +217,13 @@ export async function getOrganizerEvents(organizerId: string) {
     const q = query(eventsRef, where("organizerId", "==", organizerId));
     
     const querySnapshot = await getDocs(q);
-    const events: EventData[] = [];
+    let events: EventData[] = [];
     
     querySnapshot.forEach((eventDoc) => {
       events.push({ id: eventDoc.id, ...eventDoc.data() } as EventData);
     });
+
+    events = await markPastApprovedEventsCompleted(events);
     
     // Sort client-side to avoid requiring composite indexes immediately during MVP
     events.sort((a, b) => {
@@ -203,7 +256,17 @@ export async function getDiscoverableEvents(): Promise<{
       const event = { id: eventDoc.id, ...eventDoc.data() } as EventData;
       const eventTime = getEventTime(event.dateTime);
 
-      if (event.status !== "approved" || eventTime === null || eventTime <= now) {
+      if (event.status === "approved" && eventTime !== null && eventTime <= now) {
+        await updateDoc(doc(db, "events", event.id!), { status: "completed" }).catch((error) => {
+          console.warn(
+            "Past approved event was filtered locally, but Firestore denied the completed status update:",
+            getFirebaseErrorMessage(error)
+          );
+        });
+        continue;
+      }
+
+      if (event.status !== "approved" || eventTime === null) {
         continue;
       }
 

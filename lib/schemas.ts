@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+function isFutureDateTime(value: string) {
+  const eventTime = Date.parse(value);
+  return !Number.isNaN(eventTime) && eventTime > Date.now();
+}
+
 export const signUpSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters long." }),
@@ -21,7 +26,9 @@ export const eventCreationSchema = z.object({
   description: z.string().min(10, { message: "Description must be at least 10 characters long." }),
   location: z.string().min(3, { message: "Location is required." }),
   category: z.string().min(1, { message: "Please select a category." }),
-  dateTime: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date and time." }),
+  dateTime: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date and time." }).refine(isFutureDateTime, {
+    message: "Event date and time must be in the future.",
+  }),
   price: z.coerce.number().min(0, { message: "Price cannot be negative." }),
   capacity: z.coerce.number().int().positive().optional().or(z.literal(0)).or(z.nan()).transform(val => Number.isNaN(val) || val === 0 ? undefined : val),
 });
