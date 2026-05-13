@@ -295,12 +295,18 @@ export async function toggleEventRsvp(
     const parsed = rsvpActionSchema.parse({ eventId, userId });
     const eventRef = doc(db, "events", parsed.eventId);
     const rsvpRef = doc(db, "events", parsed.eventId, "rsvps", parsed.userId);
+    const userRef = doc(db, "users", parsed.userId);
 
     const result = await runTransaction(db, async (transaction) => {
       const eventSnap = await transaction.get(eventRef);
+      const userSnap = await transaction.get(userRef);
 
       if (!eventSnap.exists()) {
         throw new RsvpActionError("This event is no longer available.");
+      }
+
+      if (!userSnap.exists() || userSnap.data()?.role !== "attendee") {
+        throw new RsvpActionError("Only attendees can RSVP to events.");
       }
 
       const event = eventSnap.data() as EventData;

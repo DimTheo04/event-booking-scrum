@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import RoleGuard from "@/components/RoleGuard";
 import EventDiscovery from "@/components/events/EventDiscovery";
 
 export const metadata: Metadata = {
@@ -8,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function EventRsvpsPage() {
-  return <EventDiscovery view="rsvps" />;
+  return (
+    <RoleGuard allowedRoles={["attendee"]}>
+      <EventDiscovery view="rsvps" />
+    </RoleGuard>
+  );
 }

@@ -101,6 +101,7 @@ function getRsvpUnavailableReason(
 
 export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
   const { user, userData, loading: authLoading } = useAuth();
+  const role = userData?.role?.toLowerCase();
   const router = useRouter();
   const pathname = usePathname();
   const [events, setEvents] = useState<DiscoverableEventData[]>([]);
@@ -138,7 +139,7 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
     let ignore = false;
 
     async function fetchRsvpMarkers() {
-      if (!user) {
+      if (!user || role !== "attendee") {
         setRsvpEventIds(new Set());
         setRsvpStatusLoading(false);
         return;
@@ -164,7 +165,7 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
     return () => {
       ignore = true;
     };
-  }, [events, user]);
+  }, [events, role, user]);
 
   const sanitizedFilters = useMemo(() => {
     const parsed = eventDiscoveryFilterSchema.safeParse(filters);
@@ -225,11 +226,16 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
     ? getRsvpUnavailableReason(selectedEvent, selectedEventRsvped)
     : null;
   const isRsvpView = view === "rsvps";
-  const role = userData?.role?.toLowerCase();
+  const roleRsvpUnavailableReason =
+    user && role !== "attendee" ? "Only attendees can RSVP to events." : null;
 
   useEffect(() => {
     if (!authLoading && role === "admin") {
       router.replace("/dashboard/admin/events");
+    }
+
+    if (!authLoading && role === "organizer") {
+      router.replace("/dashboard/events");
     }
   }, [authLoading, role, router]);
 
@@ -274,6 +280,11 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
 
     if (!user) {
       setLoginPromptOpen(true);
+      return;
+    }
+
+    if (role !== "attendee") {
+      setRsvpFeedback("Only attendees can RSVP to events.");
       return;
     }
 
@@ -386,11 +397,11 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
       : []),
   ];
 
-  if (!authLoading && role === "admin") {
+  if (!authLoading && (role === "admin" || role === "organizer")) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <p className="text-sm font-medium text-slate-500">
-          Redirecting to admin events...
+          Redirecting to your dashboard...
         </p>
       </div>
     );
@@ -807,11 +818,13 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
           isRsvped={selectedEventRsvped}
           rsvpDisabled={
             authLoading ||
+            Boolean(roleRsvpUnavailableReason) ||
             Boolean(selectedEventRsvpUnavailableReason && !selectedEventRsvped)
           }
           rsvpLoading={rsvpLoadingEventId === selectedEvent.id}
           rsvpHelpText={
             rsvpFeedback ??
+            roleRsvpUnavailableReason ??
             selectedEventRsvpUnavailableReason ??
             (selectedEventRsvped ? "You have RSVPed to this event." : null)
           }
