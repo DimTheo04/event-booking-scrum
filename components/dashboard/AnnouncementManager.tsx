@@ -20,6 +20,7 @@ export default function AnnouncementManager({ organizerId }: { organizerId: stri
   // Create Form State
   const [newTitle, setNewTitle] = useState("");
   const [newMessage, setNewMessage] = useState("");
+  const [newAudience, setNewAudience] = useState("all");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Edit State
@@ -61,10 +62,12 @@ export default function AnnouncementManager({ organizerId }: { organizerId: stri
     if (!newTitle.trim() || !newMessage.trim()) return;
     
     try {
-      const res = await createAnnouncement(organizerId, newTitle, newMessage);
+      setIsSubmitting(true);
+      const res = await createAnnouncement(organizerId, newTitle, newMessage, newAudience);
       if (res.success) {
         setNewTitle("");
         setNewMessage("");
+        setNewAudience("all");
         fetchAnnouncements(); // Refresh list to get proper timestamps
       } else {
         alert("Failed to create announcement. Please try again.");
@@ -147,6 +150,18 @@ export default function AnnouncementManager({ organizerId }: { organizerId: stri
                 className="bg-white border-slate-300 focus:ring-brand-orange/30 rounded-md transition-colors"
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Target Audience</label>
+              <select 
+                className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-brand-orange/30 transition-colors"
+                value={newAudience}
+                onChange={(e) => setNewAudience(e.target.value)}
+              >
+                <option value="all">All Users</option>
+                <option value="organizer">Organizers Only</option>
+                <option value="attendee">Attendees Only</option>
+              </select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">Message</label>
@@ -245,9 +260,16 @@ export default function AnnouncementManager({ organizerId }: { organizerId: stri
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
                         <div>
                           <h4 className="font-bold text-lg text-brand-dark">{announcement.title}</h4>
-                          <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
-                            <Clock size={12} />
-                            <span>{dateStr} at {timeStr}</span>
+                          <div className="flex items-center gap-2 text-xs mt-1">
+                            {announcement.targetAudience && announcement.targetAudience !== 'all' && (
+                              <span className="bg-brand-orange/10 text-brand-orange px-2 py-0.5 rounded-full font-medium uppercase tracking-wider text-[10px]">
+                                {announcement.targetAudience}s
+                              </span>
+                            )}
+                            <div className="flex items-center gap-1.5 text-slate-500">
+                              <Clock size={12} />
+                              <span>{dateStr} at {timeStr}</span>
+                            </div>
                           </div>
                         </div>
                         

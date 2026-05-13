@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getOrganizerEvents, type EventData } from "@/lib/services/events";
-import { CalendarDays, MapPin, Users, Tag, Filter } from "lucide-react";
+import { CalendarDays, MapPin, Users, Tag, Filter, AlertCircle } from "lucide-react";
 
 export default function RSVPTracker({ organizerId }: { organizerId: string }) {
   const [events, setEvents] = useState<EventData[]>([]);
@@ -134,6 +134,16 @@ export default function RSVPTracker({ organizerId }: { organizerId: string }) {
                 </div>
 
                 <div className="p-5 space-y-3 flex-1">
+                  {event.status === 'rejected' && event.rejectReason && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex gap-3 text-red-800 text-sm mb-2">
+                      <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />
+                      <div>
+                        <p className="font-semibold mb-0.5">Event Rejected</p>
+                        <p className="text-red-700">{event.rejectReason}</p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-start gap-2 text-sm text-slate-600">
                     <CalendarDays size={16} className="mt-0.5 shrink-0 text-brand-light" />
                     <span>{dateStr}</span>
