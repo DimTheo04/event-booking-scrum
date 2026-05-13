@@ -10,6 +10,7 @@ import {
   MapPin,
   Pencil,
   Tag,
+  TicketCheck,
   UserRound,
   Users,
   X,
@@ -56,6 +57,12 @@ interface EventDetailsModalProps {
     event: EventDetailsModalEvent
   ) => Promise<EventDetailsActionResult>;
   cancelledNotice?: string;
+  showRsvpAction?: boolean;
+  isRsvped?: boolean;
+  rsvpDisabled?: boolean;
+  rsvpLoading?: boolean;
+  rsvpHelpText?: string | null;
+  onRsvpToggle?: () => void;
 }
 
 function formatDateTimeDisplay(dateTime: string) {
@@ -130,6 +137,12 @@ export default function EventDetailsModal({
   onSave,
   onCancelEvent,
   cancelledNotice = "This event has been cancelled.",
+  showRsvpAction = false,
+  isRsvped = false,
+  rsvpDisabled = false,
+  rsvpLoading = false,
+  rsvpHelpText,
+  onRsvpToggle,
 }: EventDetailsModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValues, setEditValues] = useState<EventUpdateValues>(() =>
@@ -146,6 +159,7 @@ export default function EventDetailsModal({
   const isFull = hasCapacity && event.rsvpCount >= event.capacity!;
   const canEdit = canManage && event.status !== "cancelled" && event.status !== "rejected";
   const canCancel = canManage && event.status !== "cancelled" && event.status !== "rejected";
+  const rsvpButtonLabel = isRsvped ? "Cancel RSVP" : "RSVP";
 
   function handleEditChange<K extends keyof EventUpdateValues>(
     field: K,
@@ -405,27 +419,53 @@ export default function EventDetailsModal({
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-          {canManage && onCancelEvent ? (
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleCancelEvent}
-              disabled={isCancelling || !canCancel}
-              className="justify-center"
-            >
-              <Ban size={16} />
-              {event.status === "cancelled"
-                ? "Event Cancelled"
-                : isCancelling
-                  ? "Cancelling..."
-                  : "Cancel Event"}
-            </Button>
-          ) : (
-            <div />
-          )}
+        <div className="grid gap-3 border-t border-slate-200 px-6 py-5 sm:grid-cols-3 sm:items-center">
+          <div className="flex justify-center sm:justify-start">
+            {canManage && onCancelEvent ? (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleCancelEvent}
+                disabled={isCancelling || !canCancel}
+                className="justify-center"
+              >
+                <Ban size={16} />
+                {event.status === "cancelled"
+                  ? "Event Cancelled"
+                  : isCancelling
+                    ? "Cancelling..."
+                    : "Cancel Event"}
+              </Button>
+            ) : null}
+          </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-col items-center gap-2">
+            {showRsvpAction && (
+              <>
+                <Button
+                  type="button"
+                  onClick={onRsvpToggle}
+                  disabled={rsvpLoading || rsvpDisabled}
+                  className={`min-w-36 justify-center ${
+                    isRsvped
+                      ? "border-brand-orange bg-white text-brand-dark hover:bg-brand-orange/10"
+                      : "bg-brand-orange text-white hover:bg-brand-orange/90"
+                  }`}
+                  variant={isRsvped ? "outline" : "default"}
+                >
+                  <TicketCheck size={16} />
+                  {rsvpLoading ? "Updating..." : rsvpButtonLabel}
+                </Button>
+                {rsvpHelpText && (
+                  <p className="max-w-56 text-center text-xs text-slate-500">
+                    {rsvpHelpText}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
             {canEdit && isEditing ? (
               <>
                 <Button

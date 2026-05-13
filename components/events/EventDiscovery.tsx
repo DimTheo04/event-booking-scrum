@@ -6,12 +6,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import {
   CalendarDays,
+  CheckCircle2,
   Filter,
   LogIn,
   LogOut,
   MapPin,
   Search,
   Tag,
+  TicketCheck,
   User as UserIcon,
   Users,
   Megaphone,
@@ -29,8 +31,16 @@ import {
 } from "@/lib/schemas";
 import {
   getDiscoverableEvents,
+  getUserRsvpEventIds,
+  toggleEventRsvp,
   type DiscoverableEventData,
 } from "@/lib/services/events";
+
+type EventsView = "all" | "rsvps";
+
+interface EventDiscoveryProps {
+  view?: EventsView;
+}
 
 const defaultFilters: EventDiscoveryFilterValues = {
   search: "",
@@ -67,7 +77,29 @@ function formatPrice(price: number) {
   return price === 0 ? "Free" : `${price.toFixed(2)} EUR`;
 }
 
-export default function EventDiscovery() {
+function getRsvpUnavailableReason(
+  event: DiscoverableEventData,
+  isRsvped: boolean
+) {
+  if (isRsvped) {
+    return null;
+  }
+
+  const eventTime = getEventTime(event);
+  if (event.status !== "approved" || eventTime === null || eventTime <= Date.now()) {
+    return "This event is not accepting new RSVPs.";
+  }
+
+  const hasCapacity =
+    typeof event.capacity === "number" && event.capacity > 0;
+  if (hasCapacity && event.rsvpCount >= event.capacity!) {
+    return "This event is currently full.";
+  }
+
+  return null;
+}
+
+export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
   const { user, userData, loading: authLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -75,6 +107,13 @@ export default function EventDiscovery() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [rsvpEventIds, setRsvpEventIds] = useState<Set<string>>(new Set());
+  const [rsvpStatusLoading, setRsvpStatusLoading] = useState(false);
+  const [rsvpLoadingEventId, setRsvpLoadingEventId] = useState<string | null>(
+    null
+  );
+  const [rsvpFeedback, setRsvpFeedback] = useState<string | null>(null);
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
   const [filters, setFilters] =
     useState<EventDiscoveryFilterValues>(defaultFilters);
 
@@ -94,6 +133,38 @@ export default function EventDiscovery() {
 
     fetchEvents();
   }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function fetchRsvpMarkers() {
+      if (!user) {
+        setRsvpEventIds(new Set());
+        setRsvpStatusLoading(false);
+        return;
+      }
+
+      const eventIds = events
+        .map((event) => event.id)
+        .filter((eventId): eventId is string => Boolean(eventId));
+
+      setRsvpStatusLoading(true);
+      const res = await getUserRsvpEventIds(eventIds, user.uid);
+
+      if (ignore) {
+        return;
+      }
+
+      setRsvpEventIds(new Set(res.success ? res.eventIds : []));
+      setRsvpStatusLoading(false);
+    }
+
+    fetchRsvpMarkers();
+
+    return () => {
+      ignore = true;
+    };
+  }, [events, user]);
 
   const sanitizedFilters = useMemo(() => {
     const parsed = eventDiscoveryFilterSchema.safeParse(filters);
@@ -130,6 +201,16 @@ export default function EventDiscovery() {
     });
   }, [events, sanitizedFilters]);
 
+  const visibleEvents = useMemo(() => {
+    if (view !== "rsvps") {
+      return filteredEvents;
+    }
+
+    return filteredEvents.filter(
+      (event) => event.id && rsvpEventIds.has(event.id)
+    );
+  }, [filteredEvents, rsvpEventIds, view]);
+
   const hasActiveFilters =
     sanitizedFilters.search !== "" ||
     sanitizedFilters.category !== "all" ||
@@ -137,6 +218,13 @@ export default function EventDiscovery() {
     sanitizedFilters.endDate !== "";
   const selectedEvent =
     events.find((event) => event.id === selectedEventId) ?? null;
+  const selectedEventRsvped = selectedEvent?.id
+    ? rsvpEventIds.has(selectedEvent.id)
+    : false;
+  const selectedEventRsvpUnavailableReason = selectedEvent
+    ? getRsvpUnavailableReason(selectedEvent, selectedEventRsvped)
+    : null;
+  const isRsvpView = view === "rsvps";
 
   function updateFilter(
     key: keyof EventDiscoveryFilterValues,
@@ -155,10 +243,70 @@ export default function EventDiscovery() {
 
   function openEventDetails(event: DiscoverableEventData) {
     setSelectedEventId(event.id ?? null);
+    setRsvpFeedback(null);
   }
 
   function closeEventDetails() {
     setSelectedEventId(null);
+    setRsvpFeedback(null);
+  }
+
+  async function handleRsvpToggle(event: DiscoverableEventData) {
+    if (!event.id) {
+      setRsvpFeedback("This event cannot be updated right now.");
+      return;
+    }
+
+    const isRsvped = rsvpEventIds.has(event.id);
+    const unavailableReason = getRsvpUnavailableReason(event, isRsvped);
+
+    if (unavailableReason) {
+      setRsvpFeedback(unavailableReason);
+      return;
+    }
+
+    if (!user) {
+      setLoginPromptOpen(true);
+      return;
+    }
+
+    setRsvpLoadingEventId(event.id);
+    setRsvpFeedback(null);
+
+    const res = await toggleEventRsvp(event.id, user.uid);
+
+    setRsvpLoadingEventId(null);
+
+    if (!res.success) {
+      setRsvpFeedback(
+        res.message || "We could not update your RSVP right now."
+      );
+      return;
+    }
+
+    setRsvpEventIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+      if (res.rsvped) {
+        nextIds.add(event.id!);
+      } else {
+        nextIds.delete(event.id!);
+      }
+      return nextIds;
+    });
+
+    setEvents((currentEvents) =>
+      currentEvents.map((currentEvent) =>
+        currentEvent.id === event.id
+          ? { ...currentEvent, rsvpCount: res.rsvpCount }
+          : currentEvent
+      )
+    );
+    setRsvpFeedback(res.message ?? null);
+  }
+
+  function handleLoginRedirect() {
+    const redirectPath = pathname || "/events";
+    router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`);
   }
 
   const role = userData?.role?.toLowerCase();
@@ -175,7 +323,12 @@ export default function EventDiscovery() {
           {
             href: "/events",
             icon: CalendarDays,
-            label: "Events",
+            label: "All events",
+          },
+          {
+            href: "/events/rsvps",
+            icon: TicketCheck,
+            label: "My events",
           },
         ]
       : []),
@@ -257,7 +410,10 @@ export default function EventDiscovery() {
                     : "hover:bg-white/5 text-brand-light hover:text-white"
                 }`}
               >
-                <Icon size={20} className={isActive ? "text-brand-orange" : ""} />
+                <Icon
+                  size={20}
+                  className={isActive ? "text-brand-orange" : ""}
+                />
                 <span className="font-medium text-white">{link.label}</span>
               </Link>
             );
@@ -301,10 +457,13 @@ export default function EventDiscovery() {
         <div className="p-8 lg:p-12">
           <div className="max-w-6xl mx-auto space-y-8">
             <div>
-              <h2 className="text-3xl font-bold text-brand-dark">Events</h2>
+              <h2 className="text-3xl font-bold text-brand-dark">
+                {isRsvpView ? "My Events" : "Events"}
+              </h2>
               <p className="text-slate-600 mt-2">
-                Discover approved upcoming events from organizers across the
-                platform.
+                {isRsvpView
+                  ? "Review the upcoming events you have RSVPed to."
+                  : "Discover approved upcoming events from organizers across the platform."}
               </p>
             </div>
 
@@ -378,17 +537,43 @@ export default function EventDiscovery() {
               <div className="bg-white p-12 rounded-xl shadow-sm border border-slate-200 text-center">
                 <p className="text-red-600">{error}</p>
               </div>
-            ) : filteredEvents.length === 0 ? (
+            ) : isRsvpView && authLoading ? (
+              <div className="flex justify-center p-12">
+                <p className="text-slate-500">Loading your RSVPs...</p>
+              </div>
+            ) : isRsvpView && !user ? (
+              <div className="bg-white p-12 rounded-xl shadow-sm border border-slate-200 text-center">
+                <p className="text-slate-500">
+                  Sign in to see the upcoming events you have RSVPed to.
+                </p>
+                <Button
+                  type="button"
+                  className="mt-5 bg-brand-orange text-white hover:bg-brand-orange/90"
+                  onClick={() => setLoginPromptOpen(true)}
+                >
+                  <LogIn size={16} />
+                  Sign In
+                </Button>
+              </div>
+            ) : isRsvpView && rsvpStatusLoading ? (
+              <div className="flex justify-center p-12">
+                <p className="text-slate-500">Loading your RSVPs...</p>
+              </div>
+            ) : visibleEvents.length === 0 ? (
               <div className="bg-white p-12 rounded-xl shadow-sm border border-slate-200 text-center">
                 <p className="text-slate-500">
                   {events.length === 0
                     ? "No upcoming approved events are available yet."
-                    : "No events found matching your filters."}
+                    : isRsvpView && hasActiveFilters
+                      ? "No RSVPed events match your filters."
+                      : isRsvpView
+                        ? "You have not RSVPed to any upcoming events yet."
+                        : "No events found matching your filters."}
                 </p>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredEvents.map((event) => {
+            ) : isRsvpView ? (
+              <div className="space-y-4">
+                {visibleEvents.map((event) => {
                   const category = getCategory(event);
                   const rsvpCount =
                     typeof event.rsvpCount === "number" ? event.rsvpCount : 0;
@@ -397,11 +582,116 @@ export default function EventDiscovery() {
                   const availability = hasCapacity
                     ? `${rsvpCount} / ${event.capacity}`
                     : "Unlimited";
+                  const date = new Date(event.dateTime);
 
                   return (
                     <article
                       key={event.id}
-                      className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow cursor-pointer"
+                      className="cursor-pointer rounded-xl border border-brand-orange/40 bg-white p-5 shadow-sm ring-1 ring-brand-orange/10 transition-shadow hover:shadow-md"
+                      onClick={() => openEventDetails(event)}
+                      onKeyDown={(keyboardEvent) => {
+                        if (
+                          keyboardEvent.key === "Enter" ||
+                          keyboardEvent.key === " "
+                        ) {
+                          keyboardEvent.preventDefault();
+                          openEventDetails(event);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <div className="flex flex-col gap-5 md:flex-row md:items-center">
+                        <div className="flex h-20 w-20 shrink-0 flex-col items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-brand-dark">
+                          <span className="text-xs font-semibold uppercase text-slate-500">
+                            {date.toLocaleString(undefined, { month: "short" })}
+                          </span>
+                          <span className="text-2xl font-bold">
+                            {date.getDate()}
+                          </span>
+                        </div>
+
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="flex items-center gap-1 rounded-full bg-brand-orange/10 px-2 py-1 text-xs font-semibold text-brand-dark">
+                              <CheckCircle2 size={14} />
+                              RSVPed
+                            </span>
+                            <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-500">
+                              <Tag size={12} /> {category}
+                            </span>
+                          </div>
+                          <h3 className="text-lg font-bold text-brand-dark">
+                            {event.title}
+                          </h3>
+                          <div className="grid gap-2 text-sm text-slate-600 md:grid-cols-3">
+                            <span className="flex items-center gap-2">
+                              <CalendarDays
+                                size={16}
+                                className="shrink-0 text-brand-light"
+                              />
+                              {formatDate(event.dateTime)}
+                            </span>
+                            <span className="flex items-center gap-2">
+                              <MapPin
+                                size={16}
+                                className="shrink-0 text-brand-light"
+                              />
+                              <span className="truncate">
+                                {event.location || "Location TBD"}
+                              </span>
+                            </span>
+                            <span className="flex items-center gap-2">
+                              <UserIcon
+                                size={16}
+                                className="shrink-0 text-brand-light"
+                              />
+                              <span className="truncate">
+                                {event.organizerName}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex shrink-0 items-center justify-between gap-5 border-t border-slate-100 pt-4 md:flex-col md:items-end md:border-t-0 md:pt-0">
+                          <div className="text-left md:text-right">
+                            <p className="text-xs font-medium text-slate-500">
+                              Availability
+                            </p>
+                            <p className="font-bold text-brand-dark">
+                              {availability}
+                            </p>
+                          </div>
+                          <p className="text-sm font-bold text-brand-dark">
+                            {formatPrice(event.price)}
+                          </p>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {visibleEvents.map((event) => {
+                  const category = getCategory(event);
+                  const rsvpCount =
+                    typeof event.rsvpCount === "number" ? event.rsvpCount : 0;
+                  const hasCapacity =
+                    typeof event.capacity === "number" && event.capacity > 0;
+                  const availability = hasCapacity
+                    ? `${rsvpCount} / ${event.capacity}`
+                    : "Unlimited";
+                  const isRsvped = event.id ? rsvpEventIds.has(event.id) : false;
+
+                  return (
+                    <article
+                      key={event.id}
+                      className={`bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col hover:shadow-md transition-shadow cursor-pointer ${
+                        isRsvped
+                          ? "border-brand-orange/50 ring-1 ring-brand-orange/20"
+                          : "border-slate-200"
+                      }`}
                       onClick={() => openEventDetails(event)}
                       onKeyDown={(keyboardEvent) => {
                         if (keyboardEvent.key === "Enter" || keyboardEvent.key === " ") {
@@ -426,6 +716,12 @@ export default function EventDiscovery() {
                             </span>
                           </div>
                         </div>
+                        {isRsvped && (
+                          <span className="ml-3 flex shrink-0 items-center gap-1 rounded-full bg-brand-orange/10 px-2 py-1 text-xs font-semibold text-brand-dark">
+                            <CheckCircle2 size={14} />
+                            RSVPed
+                          </span>
+                        )}
                       </div>
 
                       <div className="p-5 space-y-3 flex-1">
@@ -492,7 +788,62 @@ export default function EventDiscovery() {
           event={selectedEvent}
           organizerInfo={{ displayName: selectedEvent.organizerName }}
           onClose={closeEventDetails}
+          showRsvpAction
+          isRsvped={selectedEventRsvped}
+          rsvpDisabled={
+            authLoading ||
+            Boolean(selectedEventRsvpUnavailableReason && !selectedEventRsvped)
+          }
+          rsvpLoading={rsvpLoadingEventId === selectedEvent.id}
+          rsvpHelpText={
+            rsvpFeedback ??
+            selectedEventRsvpUnavailableReason ??
+            (selectedEventRsvped ? "You have RSVPed to this event." : null)
+          }
+          onRsvpToggle={() => handleRsvpToggle(selectedEvent)}
         />
+      )}
+
+      {loginPromptOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="login-required-title"
+            aria-describedby="login-required-description"
+            className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 text-center shadow-xl"
+          >
+            <h2
+              id="login-required-title"
+              className="text-2xl font-bold text-brand-dark"
+            >
+              Sign in first
+            </h2>
+            <p
+              id="login-required-description"
+              className="mt-4 text-slate-600"
+            >
+              You need to sign in before you can RSVP to an event.
+            </p>
+            <div className="mt-6 flex w-full flex-col gap-3">
+              <Button
+                type="button"
+                className="w-full bg-brand-orange text-white hover:bg-brand-orange/90"
+                onClick={handleLoginRedirect}
+              >
+                Go to Login
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => setLoginPromptOpen(false)}
+              >
+                Not now
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

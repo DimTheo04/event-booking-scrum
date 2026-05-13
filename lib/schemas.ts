@@ -45,3 +45,22 @@ export const eventDiscoveryFilterSchema = z.object({
 export type EventDiscoveryFilterValues = z.infer<
   typeof eventDiscoveryFilterSchema
 >;
+
+const firestoreDocumentIdSchema = z
+  .string()
+  .trim()
+  .min(1, { message: "Missing document id." })
+  .max(256, { message: "Document id is too long." })
+  .refine((value) => !value.includes("/"), {
+    message: "Document id cannot contain path separators.",
+  });
+
+export const rsvpActionSchema = z.object({
+  eventId: firestoreDocumentIdSchema,
+  userId: firestoreDocumentIdSchema,
+});
+
+export const rsvpLookupSchema = z.object({
+  eventIds: z.array(firestoreDocumentIdSchema).max(100),
+  userId: firestoreDocumentIdSchema,
+});
