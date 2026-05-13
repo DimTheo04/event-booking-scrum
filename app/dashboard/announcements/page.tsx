@@ -54,7 +54,7 @@ export default function AnnouncementsPage() {
         <div>
           <h2 className="text-3xl font-bold text-brand-dark">Announcements</h2>
           <p className="text-slate-600 mt-2">
-            View updates, venue changes, and important information from the platform admins.
+            View event updates and important information from the platform admins.
           </p>
         </div>
 

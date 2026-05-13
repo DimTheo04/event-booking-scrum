@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { 
   createAnnouncement, 
   getOrganizerAnnouncements, 
@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Megaphone, Trash2, Edit2, Check, X, Clock } from "lucide-react";
+import { Megaphone, Trash2, Edit2, Clock } from "lucide-react";
 
 export default function AnnouncementManager({ organizerId, isAdmin = false }: { organizerId: string, isAdmin?: boolean }) {
   const [announcements, setAnnouncements] = useState<AnnouncementData[]>([]);
@@ -28,13 +28,12 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
   const [editTitle, setEditTitle] = useState("");
   const [editMessage, setEditMessage] = useState("");
 
-  const fetchAnnouncements = async (signal?: AbortSignal) => {
-    setLoading(true);
+  const loadAnnouncements = useCallback(async (signal?: AbortSignal) => {
     try {
       const res = await getOrganizerAnnouncements(organizerId);
       if (signal?.aborted) return;
       if (res.success && res.announcements) {
-        setAnnouncements(res.announcements);
+        return res.announcements;
       } else if (!res.success) {
         alert("Failed to fetch announcements. Please try again.");
       }
@@ -42,20 +41,26 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
       if (signal?.aborted) return;
       console.error("Error fetching announcements:", error);
       alert("An error occurred while fetching announcements.");
-    } finally {
-      if (!signal?.aborted) {
-        setLoading(false);
-      }
     }
-  };
+  }, [organizerId]);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchAnnouncements(controller.signal);
+    loadAnnouncements(controller.signal)
+      .then((nextAnnouncements) => {
+        if (!controller.signal.aborted && nextAnnouncements) {
+          setAnnouncements(nextAnnouncements);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
     return () => {
       controller.abort();
     };
-  }, [organizerId]);
+  }, [loadAnnouncements]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +73,10 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
         setNewTitle("");
         setNewMessage("");
         setNewAudience("all");
-        fetchAnnouncements(); // Refresh list to get proper timestamps
+        const nextAnnouncements = await loadAnnouncements();
+        if (nextAnnouncements) {
+          setAnnouncements(nextAnnouncements);
+        }
       } else {
         alert("Failed to create announcement. Please try again.");
       }
@@ -143,8 +151,8 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
           <form onSubmit={handleCreate} className="space-y-5">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">Title</label>
-              <Input 
-                placeholder="E.g., Venue Change for Summer Fest" 
+              <Input
+                placeholder="E.g., Schedule Update for Summer Fest"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 className="bg-white border-slate-300 focus:ring-brand-orange/30 rounded-md transition-colors"
@@ -212,7 +220,7 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
           </div>
         ) : announcements.length === 0 ? (
           <div className="bg-white p-12 rounded-xl shadow-sm border border-slate-200 text-center">
-            <p className="text-slate-500">You haven't published any announcements. Use the form to create one.</p>
+            <p className="text-slate-500">You haven&apos;t published any announcements. Use the form to create one.</p>
           </div>
         ) : (
           <div className="space-y-6">

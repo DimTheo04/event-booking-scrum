@@ -74,7 +74,13 @@ export default function UserManagementTable() {
       if (res.success) {
         setUsers((prev) => prev.filter((u) => u.id !== userId));
       } else {
-        alert("Failed to delete user.");
+        const message =
+          res.error instanceof Error
+            ? res.error.message
+            : typeof res.error === "string"
+              ? res.error
+              : "Failed to delete user.";
+        alert(message);
       }
     } catch (error) {
       console.error("Failed to delete user:", error);

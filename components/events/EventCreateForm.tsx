@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { eventCreationSchema, type EventCreationFormValues } from "@/lib/schemas";
 import { createEvent } from "@/lib/services/events";
 import { useRouter } from "next/navigation";
@@ -35,7 +34,7 @@ export default function EventCreateForm({ organizerId }: { organizerId: string }
   const [isSuccess, setIsSuccess] = useState(false);
 
   const form = useForm<EventCreationFormValues>({
-    resolver: zodResolver(eventCreationSchema) as any,
+    resolver: zodResolver(eventCreationSchema) as Resolver<EventCreationFormValues>,
     defaultValues: {
       title: "",
       description: "",

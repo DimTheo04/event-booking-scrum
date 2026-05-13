@@ -1,5 +1,5 @@
-import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { collection, getDocs, doc, updateDoc, query, where } from "firebase/firestore";
 import { EventData } from "./events";
 
 export interface UserData {
@@ -38,7 +38,7 @@ export async function getPendingEvents() {
 export async function updateEventStatus(eventId: string, status: "approved" | "rejected", rejectReason?: string) {
   try {
     const eventRef = doc(db, "events", eventId);
-    const updateData: any = { status };
+    const updateData: { status: "approved" | "rejected"; rejectReason?: string } = { status };
     if (rejectReason) {
       updateData.rejectReason = rejectReason;
     }
@@ -81,8 +81,27 @@ export async function updateUserRole(userId: string, newRole: string) {
 
 export async function deleteUser(userId: string) {
   try {
-    const userRef = doc(db, "users", userId);
-    await deleteDoc(userRef);
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      return { success: false, error: new Error("You must be signed in.") };
+    }
+
+    const token = await currentUser.getIdToken();
+    const response = await fetch(`/api/admin/users/${encodeURIComponent(userId)}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      return {
+        success: false,
+        error: payload?.error ?? "Failed to delete user.",
+      };
+    }
+
     return { success: true };
   } catch (error) {
     console.error("Error deleting user:", error);

@@ -1,5 +1,5 @@
 import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, serverTimestamp, type Timestamp } from "firebase/firestore";
 
 export interface AnnouncementData {
   id?: string;
@@ -7,8 +7,8 @@ export interface AnnouncementData {
   title: string;
   message: string;
   targetAudience?: string;
-  createdAt: any;
-  updatedAt?: any;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export async function createAnnouncement(authorId: string, title: string, message: string, targetAudience: string = "all") {
