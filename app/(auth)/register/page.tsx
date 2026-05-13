@@ -4,7 +4,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FirebaseError } from "firebase/app";
-import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  signOut,
+} from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { signUpSchema, type SignUpFormValues } from "@/lib/schemas";
@@ -66,14 +70,15 @@ export default function RegisterPage() {
         createdAt: serverTimestamp(),
       });
 
+      await signOut(auth);
       setSuccess(true);
     } catch (err: unknown) {
-      console.error("Signup error:", err);
       const errorCode = err instanceof FirebaseError ? err.code : "";
       // Simplify Firebase error messages or show as-is
       if (errorCode === "auth/email-already-in-use") {
         setError("This email is already in use.");
       } else {
+        console.error("Signup error:", err);
         setError(
           err instanceof Error
             ? err.message
@@ -83,24 +88,37 @@ export default function RegisterPage() {
     }
   }
 
-  if (success) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-sm border border-slate-200 text-center">
-          <h2 className="text-2xl font-bold text-brand-dark mb-4">Registration Successful!</h2>
-          <p className="text-slate-600 mb-6">
-            Please check your inbox to verify your email address. You must verify your email before you can sign in.
-          </p>
-          <Button onClick={() => router.push("/login")} className="w-full">
-            Go to Login
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex min-h-screen bg-gray-50 flex-col md:flex-row">
+      {success && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="verification-required-title"
+            aria-describedby="verification-required-description"
+            className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 text-center shadow-xl"
+          >
+            <h2
+              id="verification-required-title"
+              className="text-2xl font-bold text-brand-dark"
+            >
+              Verify your email first
+            </h2>
+            <p
+              id="verification-required-description"
+              className="mt-4 text-slate-600"
+            >
+              You need to verify your email first. Check your inbox, then log in
+              after your email is confirmed.
+            </p>
+            <Button onClick={() => router.push("/login")} className="mt-6 w-full">
+              Go to Login
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Brand Panel - Hidden on mobile, visible on desktop */}
       <div className="hidden md:flex md:w-1/2 bg-brand-dark flex-col justify-center p-12 text-white">
         <div className="max-w-lg mx-auto">
