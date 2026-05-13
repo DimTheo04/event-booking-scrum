@@ -11,7 +11,6 @@ export default function Home() {
         <p className="text-xl text-gray-600">
           Discover exciting events, follow organizers, and manage your RSVPs all in one place.
         </p>
-        
         <div className="flex justify-center gap-4 mt-8">
           <Link href="/login">
             <Button size="lg" className="w-32">
