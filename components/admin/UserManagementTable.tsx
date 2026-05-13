@@ -12,17 +12,37 @@ export default function UserManagementTable() {
   const [searchQuery, setSearchQuery] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    const res = await getAllUsers();
-    if (res.success && res.users) {
-      setUsers(res.users);
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        const res = await getAllUsers();
+        if (!controller.signal.aborted) {
+          if (res.success && res.users) {
+            setUsers(res.users);
+          } else if (!res.success) {
+            alert("Failed to fetch users. Please try again.");
+          }
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Error fetching users:", error);
+          alert("An error occurred while fetching users.");
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
+
     fetchUsers();
+
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   const handleRoleChange = async (userId: string, newRole: string) => {

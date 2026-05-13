@@ -11,14 +11,35 @@ export default function RSVPTracker({ organizerId }: { organizerId: string }) {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   useEffect(() => {
+    const controller = new AbortController();
+
     async function fetchEvents() {
-      const res = await getOrganizerEvents(organizerId);
-      if (res.success && res.events) {
-        setEvents(res.events);
+      try {
+        const res = await getOrganizerEvents(organizerId);
+        if (!controller.signal.aborted) {
+          if (res.success && res.events) {
+            setEvents(res.events);
+          } else if (!res.success) {
+            alert("Failed to fetch events. Please try again.");
+          }
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Error fetching events:", error);
+          alert("An error occurred while fetching events.");
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     }
+
     fetchEvents();
+
+    return () => {
+      controller.abort();
+    };
   }, [organizerId]);
 
   const filteredEvents = events.filter((event) => {

@@ -53,15 +53,15 @@ export default function DashboardLayout({
             icon: PlusCircle,
             label: "Create Event",
           },
+        ]
+      : []),
+    ...(role === "admin"
+      ? [
           {
             href: "/dashboard/announcements",
             icon: Megaphone,
             label: "Announcements",
           },
-        ]
-      : []),
-    ...(role === "admin"
-      ? [
           {
             href: "/dashboard/admin/events",
             icon: CalendarDays,
