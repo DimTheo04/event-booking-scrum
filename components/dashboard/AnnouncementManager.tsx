@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Megaphone, Trash2, Edit2, Check, X, Clock } from "lucide-react";
 
-export default function AnnouncementManager({ organizerId }: { organizerId: string }) {
+export default function AnnouncementManager({ organizerId, isAdmin = false }: { organizerId: string, isAdmin?: boolean }) {
   const [announcements, setAnnouncements] = useState<AnnouncementData[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -160,7 +160,7 @@ export default function AnnouncementManager({ organizerId }: { organizerId: stri
               >
                 <option value="all">All Users</option>
                 <option value="organizer">Organizers Only</option>
-                <option value="attendee">Attendees Only</option>
+                {!isAdmin && <option value="attendee">Attendees Only</option>}
               </select>
             </div>
             <div className="space-y-2">

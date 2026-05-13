@@ -18,7 +18,7 @@ export default function AdminAnnouncementsPage() {
           </p>
         </div>
 
-        <AnnouncementManager organizerId={user.uid} />
+        <AnnouncementManager organizerId={user.uid} isAdmin={true} />
       </div>
     </div>
   );
