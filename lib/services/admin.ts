@@ -1,5 +1,5 @@
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
 import { EventData } from "./events";
 
 export interface UserData {
@@ -35,12 +35,12 @@ export async function getPendingEvents() {
   }
 }
 
-export async function updateEventStatus(eventId: string, status: "approved" | "rejected", reason?: string) {
+export async function updateEventStatus(eventId: string, status: "approved" | "rejected", rejectReason?: string) {
   try {
     const eventRef = doc(db, "events", eventId);
     const updateData: any = { status };
-    if (reason) {
-      updateData.rejectionReason = reason;
+    if (rejectReason) {
+      updateData.rejectReason = rejectReason;
     }
     await updateDoc(eventRef, updateData);
     return { success: true };
@@ -75,6 +75,17 @@ export async function updateUserRole(userId: string, newRole: string) {
     return { success: true };
   } catch (error) {
     console.error("Error updating user role:", error);
+    return { success: false, error };
+  }
+}
+
+export async function deleteUser(userId: string) {
+  try {
+    const userRef = doc(db, "users", userId);
+    await deleteDoc(userRef);
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting user:", error);
     return { success: false, error };
   }
 }

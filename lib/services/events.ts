@@ -20,6 +20,7 @@ export interface EventData extends EventCreationFormValues {
   organizerId: string;
   status: EventStatus;
   rsvpCount: number;
+  rejectReason?: string;
   createdAt?: { toMillis?: () => number } | null;
 }
 
@@ -205,8 +206,12 @@ export async function updateEvent(eventId: string, data: EventUpdateValues) {
   try {
     const validatedData = eventUpdateSchema.parse(data);
     const eventRef = doc(db, "events", eventId);
+    const updatePayload = {
+      ...validatedData,
+      capacity: validatedData.capacity ?? null,
+    };
 
-    await updateDoc(eventRef, validatedData);
+    await updateDoc(eventRef, updatePayload);
 
     return { success: true };
   } catch (error) {

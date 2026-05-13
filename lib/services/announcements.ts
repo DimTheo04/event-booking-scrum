@@ -6,17 +6,19 @@ export interface AnnouncementData {
   authorId: string;
   title: string;
   message: string;
+  targetAudience?: string;
   createdAt: any;
   updatedAt?: any;
 }
 
-export async function createAnnouncement(authorId: string, title: string, message: string) {
+export async function createAnnouncement(authorId: string, title: string, message: string, targetAudience: string = "all") {
   try {
     const announcementsRef = collection(db, "announcements");
     const newAnnouncement = {
       authorId,
       title,
       message,
+      targetAudience,
       createdAt: serverTimestamp(),
     };
     const docRef = await addDoc(announcementsRef, newAnnouncement);
@@ -48,6 +50,30 @@ export async function getOrganizerAnnouncements(authorId: string) {
     return { success: true, announcements };
   } catch (error) {
     console.error("Error fetching announcements:", error);
+    return { success: false, announcements: [], error };
+  }
+}
+
+export async function getPlatformAnnouncements() {
+  try {
+    const announcementsRef = collection(db, "announcements");
+    const querySnapshot = await getDocs(announcementsRef);
+    
+    const announcements: AnnouncementData[] = [];
+    querySnapshot.forEach((doc) => {
+      announcements.push({ id: doc.id, ...doc.data() } as AnnouncementData);
+    });
+
+    // Sort client-side descending
+    announcements.sort((a, b) => {
+      const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return timeB - timeA;
+    });
+
+    return { success: true, announcements };
+  } catch (error) {
+    console.error("Error fetching platform announcements:", error);
     return { success: false, announcements: [], error };
   }
 }

@@ -35,6 +35,11 @@ export default function DashboardLayout({
     ...(role === "attendee"
       ? [
           {
+            href: "/dashboard/announcements",
+            icon: Megaphone,
+            label: "Announcements",
+          },
+          {
             href: "/events",
             icon: CalendarDays,
             label: "Events",
@@ -43,6 +48,11 @@ export default function DashboardLayout({
       : []),
     ...(role === "organizer"
       ? [
+          {
+            href: "/dashboard/announcements",
+            icon: Megaphone,
+            label: "Announcements",
+          },
           {
             href: "/dashboard/events",
             icon: CalendarDays,
@@ -53,15 +63,15 @@ export default function DashboardLayout({
             icon: PlusCircle,
             label: "Create Event",
           },
-          {
-            href: "/dashboard/announcements",
-            icon: Megaphone,
-            label: "Announcements",
-          },
         ]
       : []),
     ...(role === "admin"
       ? [
+          {
+            href: "/dashboard/admin/announcements",
+            icon: Megaphone,
+            label: "Announcements",
+          },
           {
             href: "/dashboard/admin/events",
             icon: CalendarDays,
