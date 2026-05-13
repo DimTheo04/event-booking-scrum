@@ -18,6 +18,7 @@ export interface EventData extends EventCreationFormValues {
   organizerId: string;
   status: EventStatus;
   rsvpCount: number;
+  rejectReason?: string;
   createdAt?: { toMillis?: () => number } | null;
 }
 

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAllUsers, updateUserRole, type UserData } from "@/lib/services/admin";
+import { getAllUsers, updateUserRole, deleteUser, type UserData } from "@/lib/services/admin";
 import { Button } from "@/components/ui/button";
-import { Search, ShieldAlert, ShieldCheck, User as UserIcon } from "lucide-react";
+import { Search, ShieldAlert, ShieldCheck, User as UserIcon, Trash } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export default function UserManagementTable() {
@@ -11,29 +11,77 @@ export default function UserManagementTable() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-
-  const fetchUsers = async () => {
-    setLoading(true);
-    const res = await getAllUsers();
-    if (res.success && res.users) {
-      setUsers(res.users);
-    }
-    setLoading(false);
-  };
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        const res = await getAllUsers();
+        if (!controller.signal.aborted) {
+          if (res.success && res.users) {
+            setUsers(res.users);
+          } else if (!res.success) {
+            alert("Failed to fetch users. Please try again.");
+          }
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Error fetching users:", error);
+          alert("An error occurred while fetching users.");
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
+
     fetchUsers();
+
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     setUpdatingId(userId);
-    const res = await updateUserRole(userId, newRole);
-    if (res.success) {
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
-    } else {
-      alert("Failed to update user role.");
+    try {
+      const res = await updateUserRole(userId, newRole);
+      if (res.success) {
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      } else {
+        alert("Failed to update user role.");
+      }
+    } catch (error) {
+      console.error("Failed to update user role:", error);
+      alert("An unexpected error occurred.");
+    } finally {
+      setUpdatingId(null);
     }
-    setUpdatingId(null);
+  };
+
+  const handleDeleteUser = async (userId: string, email: string) => {
+    if (!window.confirm(`Are you sure you want to delete the user ${email}? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingId(userId);
+    try {
+      const res = await deleteUser(userId);
+      if (res.success) {
+        setUsers((prev) => prev.filter((u) => u.id !== userId));
+      } else {
+        alert("Failed to delete user.");
+      }
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+      alert("An unexpected error occurred.");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const filteredUsers = users.filter(u => 
@@ -107,18 +155,29 @@ export default function UserManagementTable() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-3">
+                        {updatingId === user.id && <span className="text-xs text-brand-orange animate-pulse">Updating...</span>}
+                        {deletingId === user.id && <span className="text-xs text-red-600 animate-pulse">Deleting...</span>}
                         <select 
                           className="border border-slate-300 rounded px-2 py-1 text-xs bg-white outline-none focus:ring-1 focus:ring-brand-light"
                           value={user.role || "attendee"}
                           onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                          disabled={updatingId === user.id}
+                          disabled={updatingId === user.id || deletingId === user.id}
                         >
                           <option value="attendee">Attendee</option>
                           <option value="organizer">Organizer</option>
                           <option value="admin">Admin</option>
                         </select>
-                        {updatingId === user.id && <span className="text-xs text-brand-orange animate-pulse">Updating...</span>}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDeleteUser(user.id, user.email)}
+                          disabled={updatingId === user.id || deletingId === user.id}
+                          className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                          title="Delete user"
+                        >
+                          <Trash size={16} />
+                        </Button>
                       </div>
                     </td>
                   </tr>

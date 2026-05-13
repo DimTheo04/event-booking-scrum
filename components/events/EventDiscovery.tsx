@@ -14,6 +14,8 @@ import {
   Tag,
   User as UserIcon,
   Users,
+  Megaphone,
+  PlusCircle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -147,9 +149,71 @@ export default function EventDiscovery() {
     router.push("/login");
   }
 
+  const role = userData?.role?.toLowerCase();
+
   const navLinks = [
     ...(user ? [{ href: "/dashboard", icon: UserIcon, label: "Profile" }] : []),
-    { href: "/events", icon: CalendarDays, label: "Events" },
+    ...(role === "attendee"
+      ? [
+          {
+            href: "/dashboard/announcements",
+            icon: Megaphone,
+            label: "Announcements",
+          },
+          {
+            href: "/events",
+            icon: CalendarDays,
+            label: "Events",
+          },
+        ]
+      : []),
+    ...(role === "organizer"
+      ? [
+          {
+            href: "/dashboard/announcements",
+            icon: Megaphone,
+            label: "Announcements",
+          },
+          {
+            href: "/dashboard/events",
+            icon: CalendarDays,
+            label: "My Events",
+          },
+          {
+            href: "/dashboard/events/create",
+            icon: PlusCircle,
+            label: "Create Event",
+          },
+        ]
+      : []),
+    ...(role === "admin"
+      ? [
+          {
+            href: "/dashboard/admin/announcements",
+            icon: Megaphone,
+            label: "Announcements",
+          },
+          {
+            href: "/dashboard/admin/events",
+            icon: CalendarDays,
+            label: "Admin Approvals",
+          },
+          {
+            href: "/dashboard/admin/users",
+            icon: UserIcon,
+            label: "Manage Users",
+          },
+        ]
+      : []),
+    ...(!user
+      ? [
+          {
+            href: "/events",
+            icon: CalendarDays,
+            label: "Events",
+          },
+        ]
+      : []),
   ];
 
   return (
