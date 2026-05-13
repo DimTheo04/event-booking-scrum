@@ -225,6 +225,13 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
     ? getRsvpUnavailableReason(selectedEvent, selectedEventRsvped)
     : null;
   const isRsvpView = view === "rsvps";
+  const role = userData?.role?.toLowerCase();
+
+  useEffect(() => {
+    if (!authLoading && role === "admin") {
+      router.replace("/dashboard/admin/events");
+    }
+  }, [authLoading, role, router]);
 
   function updateFilter(
     key: keyof EventDiscoveryFilterValues,
@@ -309,8 +316,6 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
     router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`);
   }
 
-  const role = userData?.role?.toLowerCase();
-
   const navLinks = [
     ...(user ? [{ href: "/dashboard", icon: UserIcon, label: "Profile" }] : []),
     ...(role === "attendee"
@@ -380,6 +385,16 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
         ]
       : []),
   ];
+
+  if (!authLoading && role === "admin") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <p className="text-sm font-medium text-slate-500">
+          Redirecting to admin events...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50 flex-col md:flex-row">
