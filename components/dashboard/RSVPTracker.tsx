@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+import { getOrganizerEvents, type EventData } from "@/lib/services/events";
+import { CalendarDays, MapPin, Users, Tag, Filter, AlertCircle } from "lucide-react";
+=======
+>>>>>>> Stashed changes
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { cancelEvent, getOrganizerEvents, updateEvent, type EventData, type EventUpdateValues } from "@/lib/services/events";
@@ -66,6 +73,10 @@ function buildEditValues(event: EventData): EventUpdateValues {
     capacity: event.capacity,
   };
 }
+<<<<<<< Updated upstream
+=======
+>>>>>>> 2630edf (Update organizer managment (details/cancel))
+>>>>>>> Stashed changes
 
 export default function RSVPTracker({ organizerId }: { organizerId: string }) {
   const [events, setEvents] = useState<EventData[]>([]);
@@ -89,6 +100,35 @@ export default function RSVPTracker({ organizerId }: { organizerId: string }) {
       setLoading(false);
     }
     fetchEvents();
+  }, [organizerId]);
+
+  useEffect(() => {
+    async function fetchOrganizerInfo() {
+      const fallbackInfo = {
+        displayName: auth.currentUser?.displayName || "Organizer",
+        email: auth.currentUser?.email || "No email available",
+      };
+
+      try {
+        const userRef = doc(db, "users", organizerId);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          const data = userSnap.data() as Partial<OrganizerInfo>;
+          setOrganizerInfo({
+            displayName: data.displayName || fallbackInfo.displayName,
+            email: data.email || fallbackInfo.email,
+          });
+          return;
+        }
+      } catch (error) {
+        console.error("Error fetching organizer info:", error);
+      }
+
+      setOrganizerInfo(fallbackInfo);
+    }
+
+    fetchOrganizerInfo();
   }, [organizerId]);
 
   useEffect(() => {
@@ -314,11 +354,32 @@ export default function RSVPTracker({ organizerId }: { organizerId: string }) {
                 </div>
 
                 <div className="p-5 space-y-3 flex-1">
+<<<<<<< Updated upstream
                   {isCancelled && (
                     <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
                       This event has been cancelled.
                     </div>
                   )}
+=======
+<<<<<<< HEAD
+                  {event.status === 'rejected' && event.rejectReason && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex gap-3 text-red-800 text-sm mb-2">
+                      <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />
+                      <div>
+                        <p className="font-semibold mb-0.5">Event Rejected</p>
+                        <p className="text-red-700">{event.rejectReason}</p>
+                      </div>
+                    </div>
+                  )}
+
+=======
+                  {isCancelled && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+                      This event has been cancelled.
+                    </div>
+                  )}
+>>>>>>> 2630edf (Update organizer managment (details/cancel))
+>>>>>>> Stashed changes
                   <div className="flex items-start gap-2 text-sm text-slate-600">
                     <CalendarDays size={16} className="mt-0.5 shrink-0 text-brand-light" />
                     <span>{dateStr}</span>
