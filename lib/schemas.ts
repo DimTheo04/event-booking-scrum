@@ -72,13 +72,42 @@ export const rsvpLookupSchema = z.object({
   userId: firestoreDocumentIdSchema,
 });
 
+export const platformAnnouncementAudienceSchema = z.enum([
+  "all",
+  "organizer",
+  "attendee",
+]);
+
+export const organizerAnnouncementAudienceSchema = z.enum([
+  "followers",
+  "rsvps",
+  "followers_and_rsvps",
+]);
+
+export const announcementTargetAudienceSchema = z.enum([
+  "all",
+  "organizer",
+  "attendee",
+  "followers",
+  "rsvps",
+  "followers_and_rsvps",
+]);
+
 export const announcementSchema = z.object({
   title: z.string().trim().min(3, { message: "Title must be at least 3 characters long." }),
   message: z.string().trim().min(10, { message: "Message must be at least 10 characters long." }),
-  targetAudience: z.enum(["all", "organizer", "attendee"]).default("all"),
+  targetAudience: announcementTargetAudienceSchema.default("all"),
 });
 
 export type AnnouncementFormValues = z.infer<typeof announcementSchema>;
+
+export const platformAnnouncementSchema = announcementSchema.extend({
+  targetAudience: platformAnnouncementAudienceSchema.default("all"),
+});
+
+export const organizerAnnouncementSchema = announcementSchema.extend({
+  targetAudience: organizerAnnouncementAudienceSchema.default("followers_and_rsvps"),
+});
 
 export const roleUpdateSchema = z.object({
   role: z.enum(["attendee", "organizer", "admin"]),

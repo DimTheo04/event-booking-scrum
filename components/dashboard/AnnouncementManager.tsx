@@ -24,9 +24,40 @@ import {
 } from "@/components/ui/form";
 import { Megaphone, Trash2, Edit2, Clock } from "lucide-react";
 
+function formatAudienceLabel(targetAudience?: string) {
+  switch (targetAudience) {
+    case "attendee":
+      return "Attendees";
+    case "organizer":
+      return "Organizers";
+    case "followers":
+      return "Followers";
+    case "rsvps":
+      return "RSVP Attendees";
+    case "followers_and_rsvps":
+      return "Followers + RSVPs";
+    default:
+      return "All Users";
+  }
+}
+
 export default function AnnouncementManager({ organizerId, isAdmin = false }: { organizerId: string, isAdmin?: boolean }) {
   const [announcements, setAnnouncements] = useState<AnnouncementData[]>([]);
   const [loading, setLoading] = useState(true);
+  const defaultTargetAudience: AnnouncementFormValues["targetAudience"] = isAdmin
+    ? "all"
+    : "followers_and_rsvps";
+  const audienceOptions = isAdmin
+    ? [
+        { value: "all", label: "All Users" },
+        { value: "attendee", label: "Attendees Only" },
+        { value: "organizer", label: "Organizers Only" },
+      ]
+    : [
+        { value: "followers_and_rsvps", label: "Followers and RSVP Attendees" },
+        { value: "followers", label: "Followers Only" },
+        { value: "rsvps", label: "RSVP Attendees Only" },
+      ];
   
   // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -38,7 +69,7 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
     defaultValues: {
       title: "",
       message: "",
-      targetAudience: "all",
+      targetAudience: defaultTargetAudience,
     },
   });
 
@@ -78,9 +109,13 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
 
   async function onSubmit(values: AnnouncementFormValues) {
     try {
-      const res = await createAnnouncement(organizerId, values);
+      const res = await createAnnouncement(organizerId, values, { isAdmin });
       if (res.success) {
-        form.reset();
+        form.reset({
+          title: "",
+          message: "",
+          targetAudience: defaultTargetAudience,
+        });
         const nextAnnouncements = await loadAnnouncements();
         if (nextAnnouncements) {
           setAnnouncements(nextAnnouncements);
@@ -162,7 +197,11 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
             <Megaphone className="text-brand-orange" size={24} />
             <div>
               <h2 className="text-xl font-bold text-brand-dark tracking-tight">New Announcement</h2>
-              <p className="text-sm text-slate-500 mt-0.5">Send a message to your attendees</p>
+              <p className="text-sm text-slate-500 mt-0.5">
+                {isAdmin
+                  ? "Send a message across the platform"
+                  : "Send a message to followers and RSVP attendees"}
+              </p>
             </div>
           </div>
           
@@ -197,9 +236,11 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
                         className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-brand-orange/30 transition-colors"
                         {...field}
                       >
-                        <option value="all">All Users</option>
-                        <option value="organizer">Organizers Only</option>
-                        {!isAdmin && <option value="attendee">Attendees Only</option>}
+                        {audienceOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
                       </select>
                     </FormControl>
                     <FormMessage />
@@ -322,7 +363,7 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
                           <div className="flex items-center gap-2 text-xs mt-1">
                             {announcement.targetAudience && announcement.targetAudience !== 'all' && (
                               <span className="bg-brand-orange/10 text-brand-orange px-2 py-0.5 rounded-full font-medium uppercase tracking-wider text-[10px]">
-                                {announcement.targetAudience}s
+                                {formatAudienceLabel(announcement.targetAudience)}
                               </span>
                             )}
                             <div className="flex items-center gap-1.5 text-slate-500">

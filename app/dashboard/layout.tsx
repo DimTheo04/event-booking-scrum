@@ -63,6 +63,11 @@ export default function DashboardLayout({
             label: "Announcements",
           },
           {
+            href: "/dashboard/announcements/create",
+            icon: PlusCircle,
+            label: "Create Announcement",
+          },
+          {
             href: "/dashboard/events",
             icon: CalendarDays,
             label: "My Events",

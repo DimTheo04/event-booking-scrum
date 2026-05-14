@@ -26,6 +26,7 @@ const TYPE_LABEL: Record<NotificationType, string> = {
   EVENT_APPROVAL: "Event Approved",
   EVENT_REJECTION: "Event Rejected",
   GLOBAL_ANNOUNCEMENT: "Platform Announcement",
+  ORGANIZER_ANNOUNCEMENT: "Organizer Announcement",
   FOLLOWED_ORGANIZER_EVENT: "New Event from Organizer",
 };
 
@@ -35,6 +36,7 @@ const TYPE_COLOR: Record<NotificationType, string> = {
   EVENT_APPROVAL: "bg-green-50 text-green-700",
   EVENT_REJECTION: "bg-red-50 text-red-700",
   GLOBAL_ANNOUNCEMENT: "bg-amber-50 text-amber-700",
+  ORGANIZER_ANNOUNCEMENT: "bg-orange-50 text-orange-700",
   FOLLOWED_ORGANIZER_EVENT: "bg-teal-50 text-teal-700",
 };
 

@@ -20,6 +20,7 @@ export type NotificationType =
   | "EVENT_APPROVAL"
   | "EVENT_REJECTION"
   | "GLOBAL_ANNOUNCEMENT"
+  | "ORGANIZER_ANNOUNCEMENT"
   | "FOLLOWED_ORGANIZER_EVENT";
 
 export interface NotificationData {
@@ -225,5 +226,70 @@ export async function notifyAnnouncementAudience(
     );
   } catch (error) {
     console.error("notifyAnnouncementAudience failed:", error);
+  }
+}
+
+async function getOrganizerFollowerIds(organizerId: string): Promise<string[]> {
+  const followsRef = collection(db, "follows");
+  const q = query(followsRef, where("organizerId", "==", organizerId));
+  const snapshot = await getDocs(q);
+
+  return snapshot.docs
+    .map((docSnap) => {
+      const data = docSnap.data();
+      return (data.followerId || data.attendeeId) as string | undefined;
+    })
+    .filter((id): id is string => Boolean(id));
+}
+
+async function getOrganizerRsvpAttendeeIds(organizerId: string): Promise<string[]> {
+  const eventsRef = collection(db, "events");
+  const eventsQuery = query(eventsRef, where("organizerId", "==", organizerId));
+  const eventsSnapshot = await getDocs(eventsQuery);
+  const attendeeIds = new Set<string>();
+
+  await Promise.all(
+    eventsSnapshot.docs.map(async (eventDoc) => {
+      const rsvpsRef = collection(db, "events", eventDoc.id, "rsvps");
+      const rsvpsSnapshot = await getDocs(rsvpsRef);
+
+      rsvpsSnapshot.docs.forEach((rsvpDoc) => {
+        const userId = (rsvpDoc.data().userId as string | undefined) || rsvpDoc.id;
+        if (userId) {
+          attendeeIds.add(userId);
+        }
+      });
+    })
+  );
+
+  return Array.from(attendeeIds);
+}
+
+export async function notifyOrganizerAnnouncementAudience(
+  organizerId: string,
+  audience: "followers" | "rsvps" | "followers_and_rsvps",
+  announcementTitle: string
+): Promise<void> {
+  try {
+    const recipientIds = new Set<string>();
+
+    if (audience === "followers" || audience === "followers_and_rsvps") {
+      const followerIds = await getOrganizerFollowerIds(organizerId);
+      followerIds.forEach((id) => recipientIds.add(id));
+    }
+
+    if (audience === "rsvps" || audience === "followers_and_rsvps") {
+      const rsvpAttendeeIds = await getOrganizerRsvpAttendeeIds(organizerId);
+      rsvpAttendeeIds.forEach((id) => recipientIds.add(id));
+    }
+
+    await createBulkNotifications(
+      Array.from(recipientIds),
+      "ORGANIZER_ANNOUNCEMENT",
+      `New organizer announcement: "${announcementTitle}".`,
+      "/dashboard/announcements"
+    );
+  } catch (error) {
+    console.error("notifyOrganizerAnnouncementAudience failed:", error);
   }
 }

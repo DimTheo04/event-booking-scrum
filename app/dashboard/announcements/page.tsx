@@ -2,11 +2,33 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
-import { getPlatformAnnouncements, type AnnouncementData } from "@/lib/services/announcements";
+import {
+  getVisibleAnnouncementsForUser,
+  type AnnouncementData,
+} from "@/lib/services/announcements";
 import { Megaphone, Clock } from "lucide-react";
 
+function getAnnouncementSource(announcement: AnnouncementData) {
+  const target = announcement.targetAudience || "all";
+  const isOrganizerAnnouncement =
+    announcement.audienceType === "organizer" ||
+    target === "followers" ||
+    target === "rsvps" ||
+    target === "followers_and_rsvps";
+
+  return isOrganizerAnnouncement
+    ? {
+        label: "Organizer Announcement",
+        className: "bg-orange-50 text-orange-700 border-orange-200",
+      }
+    : {
+        label: "Platform Announcement",
+        className: "bg-amber-50 text-amber-700 border-amber-200",
+      };
+}
+
 export default function AnnouncementsPage() {
-  const { userData } = useAuth();
+  const { user, userData } = useAuth();
   const [announcements, setAnnouncements] = useState<AnnouncementData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -15,15 +37,15 @@ export default function AnnouncementsPage() {
 
     const fetchAnnouncements = async () => {
       try {
-        const res = await getPlatformAnnouncements();
+        if (!user?.uid || !userData?.role) return;
+
+        const res = await getVisibleAnnouncementsForUser(
+          user.uid,
+          userData.role
+        );
         if (!controller.signal.aborted) {
           if (res.success && res.announcements) {
-            const role = userData?.role || "attendee";
-            const filtered = res.announcements.filter((a) => {
-              const target = a.targetAudience || "all";
-              return target === "all" || target === role;
-            });
-            setAnnouncements(filtered);
+            setAnnouncements(res.announcements);
           }
         }
       } catch (error) {
@@ -37,14 +59,14 @@ export default function AnnouncementsPage() {
       }
     };
 
-    if (userData) {
+    if (user && userData) {
       fetchAnnouncements();
     }
 
     return () => {
       controller.abort();
     };
-  }, [userData]);
+  }, [user, userData]);
 
   if (!userData) return null;
 
@@ -73,6 +95,7 @@ export default function AnnouncementsPage() {
           ) : (
             <div className="space-y-4">
               {announcements.map((announcement) => {
+                const source = getAnnouncementSource(announcement);
                 const dateObj = announcement.createdAt?.toMillis ? new Date(announcement.createdAt.toMillis()) : new Date();
                 const dateStr = dateObj.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
                 const timeStr = dateObj.toLocaleString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -80,10 +103,21 @@ export default function AnnouncementsPage() {
                 return (
                   <div key={announcement.id} className="bg-gray-50 border border-slate-100 rounded-lg p-5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                      <h4 className="font-bold text-lg text-brand-dark">{announcement.title}</h4>
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                        <Clock size={12} />
-                        <span>{dateStr} at {timeStr}</span>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${source.className}`}
+                          >
+                            {source.label}
+                          </span>
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                            <Clock size={12} />
+                            <span>{dateStr} at {timeStr}</span>
+                          </div>
+                        </div>
+                        <h4 className="font-bold text-lg text-brand-dark">
+                          {announcement.title}
+                        </h4>
                       </div>
                     </div>
                     <div className="text-slate-600 text-sm whitespace-pre-wrap">
