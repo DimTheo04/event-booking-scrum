@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import {
+  Bell,
   CalendarDays,
   CheckCircle2,
   Filter,
@@ -39,6 +40,7 @@ import {
 } from "@/lib/services/events";
 import { getFollowingIds, toggleFollow } from "@/lib/services/follows";
 import { Switch } from "@/components/ui/switch";
+import { useNotifications } from "@/hooks/useNotifications";
 
 type EventsView = "all" | "rsvps";
 
@@ -105,6 +107,7 @@ function getRsvpUnavailableReason(
 
 export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
   const { user, userData, loading: authLoading } = useAuth();
+  const { unreadCount } = useNotifications();
   const role = userData?.role?.toLowerCase();
   const router = useRouter();
   const pathname = usePathname();
@@ -487,6 +490,41 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
               </Link>
             );
           })}
+
+          {/* Notifications — shown for authenticated users */}
+          {user && (
+            <Link
+              href="/dashboard/notifications"
+              className={`flex items-center space-x-3 px-4 py-3 rounded-md transition-colors ${
+                pathname === "/dashboard/notifications"
+                  ? "bg-white/10 text-brand-orange"
+                  : "hover:bg-white/5 text-brand-light hover:text-white"
+              }`}
+            >
+              <span className="relative inline-flex shrink-0">
+                <Bell
+                  size={20}
+                  className={
+                    pathname === "/dashboard/notifications"
+                      ? "text-brand-orange"
+                      : ""
+                  }
+                />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-orange" />
+                  </span>
+                )}
+              </span>
+              <span className="font-medium text-white">Notifications</span>
+              {unreadCount > 0 && (
+                <span className="ml-auto text-xs font-bold bg-brand-orange text-white rounded-full px-1.5 py-0.5 leading-none">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </Link>
+          )}
         </nav>
 
         <div className="mt-auto pt-6 border-t border-white/10">
