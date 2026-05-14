@@ -10,8 +10,15 @@ import {
   doc,
   getDoc,
   updateDoc,
+  runTransaction,
+  writeBatch,
 } from "firebase/firestore";
-import { EventCreationFormValues } from "@/lib/schemas";
+import {
+  eventCreationSchema,
+  EventCreationFormValues,
+  rsvpActionSchema,
+  rsvpLookupSchema,
+} from "@/lib/schemas";
 
 type EventStatus = "pending" | "approved" | "rejected" | "completed" | "cancelled";
 
@@ -29,6 +36,26 @@ export type DiscoverableEventData = EventData & {
   organizerName: string;
 };
 
+type ToggleEventRsvpResult =
+  | {
+      success: true;
+      rsvped: boolean;
+      rsvpCount: number;
+      message: string;
+    }
+  | {
+      success: false;
+      error: unknown;
+      message: string;
+    };
+
+class RsvpActionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RsvpActionError";
+  }
+}
+
 function getTimestampMillis(value: unknown) {
   if (typeof value !== "object" || value === null || !("toMillis" in value)) {
     return 0;
@@ -41,6 +68,48 @@ function getTimestampMillis(value: unknown) {
 function getEventTime(dateTime: string) {
   const eventTime = Date.parse(dateTime);
   return Number.isNaN(eventTime) ? null : eventTime;
+}
+
+function isPastEvent(event: EventData, now = Date.now()) {
+  const eventTime = getEventTime(event.dateTime);
+  return eventTime !== null && eventTime <= now;
+}
+
+function isFutureDateTime(value: string) {
+  const eventTime = getEventTime(value);
+  return eventTime !== null && eventTime > Date.now();
+}
+
+async function markPastApprovedEventsCompleted(events: EventData[]) {
+  const now = Date.now();
+  const pastApprovedEvents = events.filter(
+    (event) => event.id && event.status === "approved" && isPastEvent(event, now)
+  );
+
+  if (pastApprovedEvents.length === 0) {
+    return events;
+  }
+
+  const batch = writeBatch(db);
+  pastApprovedEvents.forEach((event) => {
+    batch.update(doc(db, "events", event.id!), { status: "completed" });
+  });
+
+  try {
+    await batch.commit();
+  } catch (error) {
+    console.warn(
+      "Past approved events were marked completed locally, but Firestore denied the status update:",
+      getFirebaseErrorMessage(error)
+    );
+  }
+
+  const completedEventIds = new Set(pastApprovedEvents.map((event) => event.id));
+  return events.map((event) =>
+    event.id && completedEventIds.has(event.id)
+      ? { ...event, status: "completed" as const }
+      : event
+  );
 }
 
 async function getOrganizerName(
@@ -78,7 +147,9 @@ const eventUpdateSchema = z.object({
   description: z.string().min(10, { message: "Description must be at least 10 characters long." }),
   location: z.string().min(3, { message: "Location is required." }),
   category: z.string().min(1, { message: "Please select a category." }),
-  dateTime: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date and time." }),
+  dateTime: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date and time." }).refine(isFutureDateTime, {
+    message: "Event date and time must be in the future.",
+  }),
   price: z.coerce.number().min(0, { message: "Price cannot be negative." }),
   capacity: z.coerce
     .number()
@@ -93,6 +164,10 @@ const eventUpdateSchema = z.object({
 export type EventUpdateValues = z.infer<typeof eventUpdateSchema>;
 
 function getFirebaseErrorMessage(error: unknown) {
+  if (error instanceof z.ZodError) {
+    return error.issues[0]?.message ?? "Please review the event details and try again.";
+  }
+
   if (
     typeof error === "object" &&
     error !== null &&
@@ -112,12 +187,13 @@ function getFirebaseErrorMessage(error: unknown) {
 
 export async function createEvent(data: EventCreationFormValues, organizerId: string) {
   try {
+    const validatedData = eventCreationSchema.parse(data);
     const eventsRef = collection(db, "events");
     
     // As per PRD, new events start with 'pending' status
     const newEvent = {
-      ...data,
-      capacity: data.capacity === undefined ? null : data.capacity,
+      ...validatedData,
+      capacity: validatedData.capacity === undefined ? null : validatedData.capacity,
       organizerId,
       status: "pending",
       rsvpCount: 0,
@@ -128,7 +204,7 @@ export async function createEvent(data: EventCreationFormValues, organizerId: st
     return { success: true, id: docRef.id };
   } catch (error) {
     console.error("Error creating event:", error);
-    return { success: false, error };
+    return { success: false, error, message: getFirebaseErrorMessage(error) };
   }
 }
 
@@ -141,11 +217,13 @@ export async function getOrganizerEvents(organizerId: string) {
     const q = query(eventsRef, where("organizerId", "==", organizerId));
     
     const querySnapshot = await getDocs(q);
-    const events: EventData[] = [];
+    let events: EventData[] = [];
     
     querySnapshot.forEach((eventDoc) => {
       events.push({ id: eventDoc.id, ...eventDoc.data() } as EventData);
     });
+
+    events = await markPastApprovedEventsCompleted(events);
     
     // Sort client-side to avoid requiring composite indexes immediately during MVP
     events.sort((a, b) => {
@@ -178,7 +256,17 @@ export async function getDiscoverableEvents(): Promise<{
       const event = { id: eventDoc.id, ...eventDoc.data() } as EventData;
       const eventTime = getEventTime(event.dateTime);
 
-      if (event.status !== "approved" || eventTime === null || eventTime <= now) {
+      if (event.status === "approved" && eventTime !== null && eventTime <= now) {
+        await updateDoc(doc(db, "events", event.id!), { status: "completed" }).catch((error) => {
+          console.warn(
+            "Past approved event was filtered locally, but Firestore denied the completed status update:",
+            getFirebaseErrorMessage(error)
+          );
+        });
+        continue;
+      }
+
+      if (event.status !== "approved" || eventTime === null) {
         continue;
       }
 
@@ -228,5 +316,117 @@ export async function cancelEvent(eventId: string) {
   } catch (error) {
     console.warn("Error cancelling event:", getFirebaseErrorMessage(error));
     return { success: false, error, message: getFirebaseErrorMessage(error) };
+  }
+}
+
+export async function getUserRsvpEventIds(eventIds: string[], userId: string) {
+  try {
+    const parsed = rsvpLookupSchema.parse({ eventIds, userId });
+
+    if (parsed.eventIds.length === 0) {
+      return { success: true, eventIds: [] as string[] };
+    }
+
+    const rsvpChecks = await Promise.all(
+      parsed.eventIds.map(async (eventId) => {
+        const rsvpRef = doc(db, "events", eventId, "rsvps", parsed.userId);
+        const rsvpSnap = await getDoc(rsvpRef);
+        return rsvpSnap.exists() ? eventId : null;
+      })
+    );
+
+    return {
+      success: true,
+      eventIds: rsvpChecks.filter((eventId): eventId is string => Boolean(eventId)),
+    };
+  } catch (error) {
+    console.warn("Error fetching RSVP markers:", getFirebaseErrorMessage(error));
+    return {
+      success: false,
+      eventIds: [] as string[],
+      error,
+      message: getFirebaseErrorMessage(error),
+    };
+  }
+}
+
+export async function toggleEventRsvp(
+  eventId: string,
+  userId: string
+): Promise<ToggleEventRsvpResult> {
+  try {
+    const parsed = rsvpActionSchema.parse({ eventId, userId });
+    const eventRef = doc(db, "events", parsed.eventId);
+    const rsvpRef = doc(db, "events", parsed.eventId, "rsvps", parsed.userId);
+    const userRef = doc(db, "users", parsed.userId);
+
+    const result = await runTransaction(db, async (transaction) => {
+      const eventSnap = await transaction.get(eventRef);
+      const userSnap = await transaction.get(userRef);
+
+      if (!eventSnap.exists()) {
+        throw new RsvpActionError("This event is no longer available.");
+      }
+
+      if (!userSnap.exists() || userSnap.data()?.role !== "attendee") {
+        throw new RsvpActionError("Only attendees can RSVP to events.");
+      }
+
+      const event = eventSnap.data() as EventData;
+      const rsvpSnap = await transaction.get(rsvpRef);
+      const currentRsvpCount =
+        typeof event.rsvpCount === "number" ? event.rsvpCount : 0;
+
+      if (rsvpSnap.exists()) {
+        const nextRsvpCount = Math.max(currentRsvpCount - 1, 0);
+        transaction.delete(rsvpRef);
+        transaction.update(eventRef, { rsvpCount: nextRsvpCount });
+
+        return {
+          rsvped: false,
+          rsvpCount: nextRsvpCount,
+          message: "Your RSVP has been cancelled.",
+        };
+      }
+
+      const eventTime = getEventTime(event.dateTime);
+      const isUpcoming = eventTime !== null && eventTime > Date.now();
+
+      if (event.status !== "approved" || !isUpcoming) {
+        throw new RsvpActionError("This event is not accepting new RSVPs.");
+      }
+
+      const capacity =
+        typeof event.capacity === "number" && event.capacity > 0
+          ? event.capacity
+          : null;
+
+      if (capacity !== null && currentRsvpCount >= capacity) {
+        throw new RsvpActionError("This event is currently full.");
+      }
+
+      const nextRsvpCount = currentRsvpCount + 1;
+      transaction.set(rsvpRef, {
+        userId: parsed.userId,
+        timestamp: serverTimestamp(),
+      });
+      transaction.update(eventRef, { rsvpCount: nextRsvpCount });
+
+      return {
+        rsvped: true,
+        rsvpCount: nextRsvpCount,
+        message: "You are now RSVP'd to this event.",
+      };
+    });
+
+    return { success: true, ...result };
+  } catch (error) {
+    const message =
+      error instanceof RsvpActionError
+        ? error.message
+        : getFirebaseErrorMessage(error);
+
+    console.warn("Error toggling RSVP:", message);
+    return { success: false, error, message };
   }
 }

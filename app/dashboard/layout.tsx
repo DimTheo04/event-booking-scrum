@@ -10,6 +10,7 @@ import {
   CalendarDays,
   PlusCircle,
   Megaphone,
+  TicketCheck,
   User as UserIcon,
 } from "lucide-react";
 import RoleGuard from "@/components/RoleGuard";
@@ -42,7 +43,12 @@ export default function DashboardLayout({
           {
             href: "/events",
             icon: CalendarDays,
-            label: "Events",
+            label: "All events",
+          },
+          {
+            href: "/events/rsvps",
+            icon: TicketCheck,
+            label: "My events",
           },
         ]
       : []),

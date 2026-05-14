@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { getPendingEvents, updateEventStatus } from '@/lib/services/admin';
-import type { EventData } from '@/lib/services/events';
+import type { PendingEventData } from '@/lib/services/admin';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { X } from 'lucide-react';
+import { Info, X } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -17,10 +17,11 @@ import {
 } from '@/components/ui/table';
 
 export default function PendingEventsTable() {
-  const [events, setEvents] = useState<EventData[]>([]);
+  const [events, setEvents] = useState<PendingEventData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [descriptionEvent, setDescriptionEvent] = useState<PendingEventData | null>(null);
   
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectingEventId, setRejectingEventId] = useState<string | null>(null);
@@ -57,7 +58,7 @@ export default function PendingEventsTable() {
 
   const filteredEvents = events.filter((event) => {
     const queryStr = searchQuery.toLowerCase();
-    return event.organizerId?.toLowerCase().includes(queryStr) ||
+    return event.organizerName?.toLowerCase().includes(queryStr) ||
       event.title?.toLowerCase().includes(queryStr);
   });
 
@@ -89,12 +90,12 @@ export default function PendingEventsTable() {
 
   const handleRejectSubmit = async () => {
     if (!rejectingEventId) return;
-    if (!rejectReason.trim()) {
-      alert("Please provide a reason for rejection.");
-      return;
-    }
     
-    const success = await handleStatusUpdate(rejectingEventId, 'rejected', rejectReason.trim());
+    const success = await handleStatusUpdate(
+      rejectingEventId,
+      'rejected',
+      rejectReason.trim() || undefined
+    );
     
     // Only close and clear if processing was successful
     if (success) {
@@ -119,7 +120,7 @@ export default function PendingEventsTable() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
         <h3 className="text-xl font-semibold text-brand-dark">Pending Events</h3>
         <Input
-          placeholder="Search by Title or Organizer ID..."
+          placeholder="Search by title or organizer..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="max-w-xs focus-visible:ring-brand-light"
@@ -131,7 +132,7 @@ export default function PendingEventsTable() {
           <TableHeader>
             <TableRow className="border-b border-slate-200 hover:bg-transparent">
               <TableHead className="text-slate-500 font-medium py-4">Title</TableHead>
-              <TableHead className="text-slate-500 font-medium py-4">Organizer ID</TableHead>
+              <TableHead className="text-slate-500 font-medium py-4">Organizer</TableHead>
               <TableHead className="text-slate-500 font-medium py-4">Location</TableHead>
               <TableHead className="text-slate-500 font-medium py-4">Date & Time</TableHead>
               <TableHead className="text-slate-500 font-medium py-4 text-right">Actions</TableHead>
@@ -148,12 +149,22 @@ export default function PendingEventsTable() {
               filteredEvents.map((event) => (
                 <TableRow key={event.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                   <TableCell className="font-medium text-brand-dark py-4">{event.title}</TableCell>
-                  <TableCell className="text-slate-600 py-4">{event.organizerId}</TableCell>
+                  <TableCell className="text-slate-600 py-4">{event.organizerName}</TableCell>
                   <TableCell className="text-slate-600 py-4">{event.location}</TableCell>
                   <TableCell className="text-slate-600 py-4">
                     {event.dateTime ? new Date(event.dateTime).toLocaleString() : 'TBD'}
                   </TableCell>
                   <TableCell className="text-right py-4 space-x-2">
+                    <Button
+                      size="icon-sm"
+                      variant="outline"
+                      aria-label={`Show description for ${event.title}`}
+                      title="Show description"
+                      onClick={() => setDescriptionEvent(event)}
+                      className="border-slate-200 text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
+                    >
+                      <Info />
+                    </Button>
                     <Button
                       size="sm"
                       onClick={() => handleStatusUpdate(event.id!, 'approved')}
@@ -179,22 +190,54 @@ export default function PendingEventsTable() {
         </Table>
       </div>
 
+      {/* Description Modal */}
+      {descriptionEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 relative">
+            <button
+              type="button"
+              onClick={() => setDescriptionEvent(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+              aria-label="Close description"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-xl font-semibold text-brand-dark pr-8">
+              {descriptionEvent.title}
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Submitted by {descriptionEvent.organizerName}
+            </p>
+            <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700 whitespace-pre-wrap">
+              {descriptionEvent.description}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <Button variant="outline" onClick={() => setDescriptionEvent(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Reject Modal */}
       {rejectModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 relative">
             <button 
+              type="button"
               onClick={closeRejectModal}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+              aria-label="Close reject dialog"
             >
               <X className="w-5 h-5" />
             </button>
             <h3 className="text-xl font-semibold text-brand-dark mb-4">Reject Event</h3>
             <p className="text-sm text-slate-600 mb-4">
-              Please provide a reason for rejecting this event. This will be visible to the organizer.
+              You can provide a reason for rejecting this event. It will be visible to the organizer.
             </p>
             <Textarea 
-              placeholder="Reason for rejection..."
+              placeholder="Reason for rejection (optional)..."
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               className="mb-6 resize-none h-32 focus-visible:ring-brand-light"
@@ -205,10 +248,10 @@ export default function PendingEventsTable() {
               </Button>
               <Button 
                 onClick={handleRejectSubmit}
-                disabled={!rejectReason.trim()}
+                disabled={processingId === rejectingEventId}
                 className="bg-red-600 hover:bg-red-700 text-white transition-colors"
               >
-                Confirm Reject
+                {processingId === rejectingEventId ? 'Rejecting...' : 'Confirm Reject'}
               </Button>
             </div>
           </div>

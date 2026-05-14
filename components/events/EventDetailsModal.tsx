@@ -10,6 +10,7 @@ import {
   MapPin,
   Pencil,
   Tag,
+  TicketCheck,
   UserRound,
   Users,
   X,
@@ -56,6 +57,12 @@ interface EventDetailsModalProps {
     event: EventDetailsModalEvent
   ) => Promise<EventDetailsActionResult>;
   cancelledNotice?: string;
+  showRsvpAction?: boolean;
+  isRsvped?: boolean;
+  rsvpDisabled?: boolean;
+  rsvpLoading?: boolean;
+  rsvpHelpText?: string | null;
+  onRsvpToggle?: () => void;
 }
 
 function formatDateTimeDisplay(dateTime: string) {
@@ -88,6 +95,14 @@ function formatDateTimeInput(dateTime: string) {
   const minutes = `${parsedDate.getMinutes()}`.padStart(2, "0");
 
   return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function getMinDateTimeLocalValue() {
+  const now = new Date();
+  now.setSeconds(0, 0);
+
+  const timezoneOffsetMs = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - timezoneOffsetMs).toISOString().slice(0, 16);
 }
 
 function buildEditValues(event: EventDetailsModalEvent): EventUpdateValues {
@@ -130,6 +145,12 @@ export default function EventDetailsModal({
   onSave,
   onCancelEvent,
   cancelledNotice = "This event has been cancelled.",
+  showRsvpAction = false,
+  isRsvped = false,
+  rsvpDisabled = false,
+  rsvpLoading = false,
+  rsvpHelpText,
+  onRsvpToggle,
 }: EventDetailsModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValues, setEditValues] = useState<EventUpdateValues>(() =>
@@ -144,8 +165,18 @@ export default function EventDetailsModal({
   const organizerEmail = organizerInfo?.email;
   const hasCapacity = typeof event.capacity === "number" && event.capacity > 0;
   const isFull = hasCapacity && event.rsvpCount >= event.capacity!;
-  const canEdit = canManage && event.status !== "cancelled" && event.status !== "rejected";
-  const canCancel = canManage && event.status !== "cancelled" && event.status !== "rejected";
+  const canEdit =
+    canManage &&
+    event.status !== "cancelled" &&
+    event.status !== "rejected" &&
+    event.status !== "completed";
+  const canCancel =
+    canManage &&
+    event.status !== "cancelled" &&
+    event.status !== "rejected" &&
+    event.status !== "completed";
+  const rsvpButtonLabel = isRsvped ? "Cancel RSVP" : "RSVP";
+  const minDateTime = getMinDateTimeLocalValue();
 
   function handleEditChange<K extends keyof EventUpdateValues>(
     field: K,
@@ -306,13 +337,15 @@ export default function EventDetailsModal({
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">Date & Time</label>
               {isEditing ? (
-                <div className="event-edit-datetime">
+                <div className="event-edit-datetime relative">
                   <Input
                     type="datetime-local"
+                    min={minDateTime}
                     value={editValues.dateTime}
                     onChange={(e) => handleEditChange("dateTime", e.target.value)}
                     className="pr-10"
                   />
+                  <CalendarDays className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                 </div>
               ) : (
                 <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
@@ -405,27 +438,53 @@ export default function EventDetailsModal({
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-          {canManage && onCancelEvent ? (
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleCancelEvent}
-              disabled={isCancelling || !canCancel}
-              className="justify-center"
-            >
-              <Ban size={16} />
-              {event.status === "cancelled"
-                ? "Event Cancelled"
-                : isCancelling
-                  ? "Cancelling..."
-                  : "Cancel Event"}
-            </Button>
-          ) : (
-            <div />
-          )}
+        <div className="grid gap-3 border-t border-slate-200 px-6 py-5 sm:grid-cols-3 sm:items-center">
+          <div className="flex justify-center sm:justify-start">
+            {canManage && onCancelEvent ? (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleCancelEvent}
+                disabled={isCancelling || !canCancel}
+                className="justify-center"
+              >
+                <Ban size={16} />
+                {event.status === "cancelled"
+                  ? "Event Cancelled"
+                  : isCancelling
+                    ? "Cancelling..."
+                    : "Cancel Event"}
+              </Button>
+            ) : null}
+          </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-col items-center gap-2">
+            {showRsvpAction && (
+              <>
+                <Button
+                  type="button"
+                  onClick={onRsvpToggle}
+                  disabled={rsvpLoading || rsvpDisabled}
+                  className={`min-w-36 justify-center ${
+                    isRsvped
+                      ? "border-brand-orange bg-white text-brand-dark hover:bg-brand-orange/10"
+                      : "bg-brand-orange text-white hover:bg-brand-orange/90"
+                  }`}
+                  variant={isRsvped ? "outline" : "default"}
+                >
+                  <TicketCheck size={16} />
+                  {rsvpLoading ? "Updating..." : rsvpButtonLabel}
+                </Button>
+                {rsvpHelpText && (
+                  <p className="max-w-56 text-center text-xs text-slate-500">
+                    {rsvpHelpText}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
             {canEdit && isEditing ? (
               <>
                 <Button
@@ -483,7 +542,11 @@ export default function EventDetailsModal({
         }
 
         .event-edit-datetime input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+          background: initial;
+          color: initial;
+          cursor: pointer;
           left: auto;
+          opacity: 1;
           right: 0.75rem;
           top: 50%;
           bottom: auto;

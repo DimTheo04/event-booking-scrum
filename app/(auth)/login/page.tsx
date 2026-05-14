@@ -20,6 +20,23 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
+function getPostLoginRedirectPath() {
+  if (typeof window === "undefined") {
+    return "/dashboard";
+  }
+
+  const redirect = new URLSearchParams(window.location.search).get("redirect");
+  if (!redirect || !redirect.startsWith("/") || redirect.startsWith("//")) {
+    return "/dashboard";
+  }
+
+  if (redirect === "/login" || redirect === "/register") {
+    return "/dashboard";
+  }
+
+  return redirect;
+}
+
 export default function LoginPage() {
   const router = useRouter();
 
@@ -49,8 +66,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Success, redirect to dashboard
-      router.push("/dashboard");
+      router.push(getPostLoginRedirectPath());
     } catch (err: unknown) {
       console.error("Login error:", err);
       

@@ -1,5 +1,5 @@
 import { auth, db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, query, where } from "firebase/firestore";
+import { collection, getDoc, getDocs, doc, updateDoc, query, where } from "firebase/firestore";
 import { EventData } from "./events";
 
 export interface UserData {
@@ -9,6 +9,25 @@ export interface UserData {
   role: string;
 }
 
+export type PendingEventData = EventData & {
+  organizerName: string;
+};
+
+async function getOrganizerName(organizerId: string) {
+  if (!organizerId) {
+    return "Unknown organizer";
+  }
+
+  const organizerRef = doc(db, "users", organizerId);
+  const organizerSnap = await getDoc(organizerRef);
+  const organizerData = organizerSnap.data();
+  const displayName = organizerData?.displayName;
+
+  return typeof displayName === "string" && displayName.trim()
+    ? displayName.trim()
+    : "Unknown organizer";
+}
+
 // Event Moderation Services
 export async function getPendingEvents() {
   try {
@@ -16,10 +35,17 @@ export async function getPendingEvents() {
     const q = query(eventsRef, where("status", "==", "pending"));
     const querySnapshot = await getDocs(q);
     
-    const events: EventData[] = [];
-    querySnapshot.forEach((doc) => {
-      events.push({ id: doc.id, ...doc.data() } as EventData);
-    });
+    const events = await Promise.all(
+      querySnapshot.docs.map(async (eventDoc) => {
+        const event = { id: eventDoc.id, ...eventDoc.data() } as EventData;
+        const organizerName = await getOrganizerName(event.organizerId);
+
+        return {
+          ...event,
+          organizerName,
+        };
+      })
+    );
     
     // Sort client-side
     events.sort((a, b) => {
@@ -38,7 +64,17 @@ export async function getPendingEvents() {
 export async function updateEventStatus(eventId: string, status: "approved" | "rejected", rejectReason?: string) {
   try {
     const eventRef = doc(db, "events", eventId);
-    const updateData: { status: "approved" | "rejected"; rejectReason?: string } = { status };
+    const eventSnap = await getDoc(eventRef);
+    const eventDateTime = eventSnap.data()?.dateTime;
+    const isPastEvent =
+      status === "approved" &&
+      typeof eventDateTime === "string" &&
+      Date.parse(eventDateTime) <= Date.now();
+    const nextStatus = isPastEvent ? "completed" : status;
+    const updateData: { status: "approved" | "rejected" | "completed"; rejectReason?: string } = {
+      status: nextStatus,
+    };
+
     if (rejectReason) {
       updateData.rejectReason = rejectReason;
     }
