@@ -71,3 +71,15 @@ export const rsvpLookupSchema = z.object({
   eventIds: z.array(firestoreDocumentIdSchema).max(100),
   userId: firestoreDocumentIdSchema,
 });
+
+export const announcementSchema = z.object({
+  title: z.string().trim().min(3, { message: "Title must be at least 3 characters long." }),
+  message: z.string().trim().min(10, { message: "Message must be at least 10 characters long." }),
+  targetAudience: z.enum(["all", "organizer", "attendee"]).default("all"),
+});
+
+export type AnnouncementFormValues = z.infer<typeof announcementSchema>;
+
+export const roleUpdateSchema = z.object({
+  role: z.enum(["attendee", "organizer", "admin"]),
+});

@@ -1,5 +1,6 @@
 import { db } from "@/lib/firebase";
 import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, serverTimestamp, type Timestamp } from "firebase/firestore";
+import { announcementSchema, type AnnouncementFormValues } from "@/lib/schemas";
 
 export interface AnnouncementData {
   id?: string;
@@ -11,14 +12,13 @@ export interface AnnouncementData {
   updatedAt?: Timestamp;
 }
 
-export async function createAnnouncement(authorId: string, title: string, message: string, targetAudience: string = "all") {
+export async function createAnnouncement(authorId: string, data: AnnouncementFormValues) {
   try {
+    const validatedData = announcementSchema.parse(data);
     const announcementsRef = collection(db, "announcements");
     const newAnnouncement = {
       authorId,
-      title,
-      message,
-      targetAudience,
+      ...validatedData,
       createdAt: serverTimestamp(),
     };
     const docRef = await addDoc(announcementsRef, newAnnouncement);
@@ -78,12 +78,12 @@ export async function getPlatformAnnouncements() {
   }
 }
 
-export async function updateAnnouncement(announcementId: string, title: string, message: string) {
+export async function updateAnnouncement(announcementId: string, data: Pick<AnnouncementFormValues, "title" | "message">) {
   try {
+    const validatedData = announcementSchema.pick({ title: true, message: true }).parse(data);
     const announcementRef = doc(db, "announcements", announcementId);
     await updateDoc(announcementRef, { 
-      title, 
-      message,
+      ...validatedData,
       updatedAt: serverTimestamp() 
     });
     return { success: true };

@@ -1,5 +1,6 @@
 import { auth, db } from "@/lib/firebase";
 import { collection, getDoc, getDocs, doc, updateDoc, query, where } from "firebase/firestore";
+import { roleUpdateSchema } from "@/lib/schemas";
 import { EventData } from "./events";
 
 export interface UserData {
@@ -106,8 +107,9 @@ export async function getAllUsers() {
 
 export async function updateUserRole(userId: string, newRole: string) {
   try {
+    const validated = roleUpdateSchema.parse({ role: newRole });
     const userRef = doc(db, "users", userId);
-    await updateDoc(userRef, { role: newRole });
+    await updateDoc(userRef, { role: validated.role });
     return { success: true };
   } catch (error) {
     console.error("Error updating user role:", error);
