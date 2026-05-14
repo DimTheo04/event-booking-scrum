@@ -750,7 +750,7 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
                           <h3 className="text-lg font-bold text-brand-dark">
                             {event.title}
                           </h3>
-                          <div className="grid gap-2 text-sm text-slate-600 md:grid-cols-3">
+                          <div className="flex flex-col gap-2 text-sm text-slate-600">
                             <span className="flex items-center gap-2">
                               <CalendarDays
                                 size={16}
@@ -767,7 +767,7 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
                                 {event.location || "Location TBD"}
                               </span>
                             </span>
-                            <div className="flex items-center justify-between col-span-full mt-1 md:mt-0 md:col-span-1">
+                            <div className="flex items-center gap-2">
                               <span className="flex items-center gap-2 min-w-0">
                                 <UserIcon
                                   size={16}
