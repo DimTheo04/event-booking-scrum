@@ -1,6 +1,7 @@
 import { db } from "@/lib/firebase";
 import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, serverTimestamp, type Timestamp } from "firebase/firestore";
 import { announcementSchema, type AnnouncementFormValues } from "@/lib/schemas";
+import { notifyAnnouncementAudience } from "@/lib/services/notifications";
 
 export interface AnnouncementData {
   id?: string;
@@ -22,6 +23,11 @@ export async function createAnnouncement(authorId: string, data: AnnouncementFor
       createdAt: serverTimestamp(),
     };
     const docRef = await addDoc(announcementsRef, newAnnouncement);
+
+    // Notify the target audience about the new announcement (fire-and-forget)
+    const audience: string = validatedData.targetAudience ?? "all";
+    notifyAnnouncementAudience(audience, validatedData.title).catch(console.error);
+
     return { success: true, id: docRef.id };
   } catch (error) {
     console.error("Error creating announcement:", error);

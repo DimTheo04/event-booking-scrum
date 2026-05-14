@@ -12,8 +12,10 @@ import {
   Megaphone,
   TicketCheck,
   User as UserIcon,
+  Bell,
 } from "lucide-react";
 import RoleGuard from "@/components/RoleGuard";
+import { useNotifications } from "@/hooks/useNotifications";
 
 export default function DashboardLayout({
   children,
@@ -21,6 +23,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { userData } = useAuth();
+  const { unreadCount } = useNotifications();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -128,6 +131,40 @@ export default function DashboardLayout({
                 </Link>
               );
             })}
+
+            {/* Notifications — shown for all authenticated roles */}
+            <Link
+              href="/dashboard/notifications"
+              className={`flex items-center space-x-3 px-4 py-3 rounded-md transition-colors ${
+                pathname === "/dashboard/notifications"
+                  ? "bg-white/10 text-brand-orange"
+                  : "hover:bg-white/5 text-brand-light hover:text-white"
+              }`}
+            >
+              {/* Bell icon with animated unread dot */}
+              <span className="relative inline-flex shrink-0">
+                <Bell
+                  size={20}
+                  className={
+                    pathname === "/dashboard/notifications"
+                      ? "text-brand-orange"
+                      : ""
+                  }
+                />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-orange" />
+                  </span>
+                )}
+              </span>
+              <span className="font-medium text-white">Notifications</span>
+              {unreadCount > 0 && (
+                <span className="ml-auto text-xs font-bold bg-brand-orange text-white rounded-full px-1.5 py-0.5 leading-none">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </Link>
           </nav>
 
           <div className="mt-auto pt-6 border-t border-white/10">

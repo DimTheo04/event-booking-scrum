@@ -19,6 +19,10 @@ import {
   rsvpActionSchema,
   rsvpLookupSchema,
 } from "@/lib/schemas";
+import {
+  notifyAdminsNewEvent,
+  notifyOrganizerRsvp,
+} from "@/lib/services/notifications";
 
 type EventStatus = "pending" | "approved" | "rejected" | "completed" | "cancelled";
 
@@ -201,6 +205,10 @@ export async function createEvent(data: EventCreationFormValues, organizerId: st
     };
 
     const docRef = await addDoc(eventsRef, newEvent);
+
+    // Notify all admins about the new pending event (fire-and-forget)
+    notifyAdminsNewEvent(validatedData.title).catch(console.error);
+
     return { success: true, id: docRef.id };
   } catch (error) {
     console.error("Error creating event:", error);
@@ -416,8 +424,19 @@ export async function toggleEventRsvp(
         rsvped: true,
         rsvpCount: nextRsvpCount,
         message: "You are now RSVP'd to this event.",
+        organizerId: event.organizerId,
+        eventTitle: event.title,
       };
     });
+
+    // Notify the organizer when someone RSVPs (not when they cancel)
+    if (result.rsvped && result.organizerId && result.eventTitle) {
+      notifyOrganizerRsvp(
+        result.organizerId,
+        parsed.eventId,
+        result.eventTitle
+      ).catch(console.error);
+    }
 
     return { success: true, ...result };
   } catch (error) {
