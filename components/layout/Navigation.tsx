@@ -55,74 +55,74 @@ export default function Navigation({
     ...(user ? [{ href: "/dashboard", icon: UserIcon, label: "Profile" }] : []),
     ...(role === "attendee"
       ? [
-          {
-            href: "/dashboard/announcements",
-            icon: Megaphone,
-            label: "Announcements",
-          },
-          {
-            href: "/events",
-            icon: CalendarDays,
-            label: "All events",
-          },
-          {
-            href: "/events/rsvps",
-            icon: TicketCheck,
-            label: "My events",
-          },
-        ]
+        {
+          href: "/dashboard/announcements",
+          icon: Megaphone,
+          label: "Announcements",
+        },
+        {
+          href: "/events",
+          icon: CalendarDays,
+          label: "All events",
+        },
+        {
+          href: "/events/rsvps",
+          icon: TicketCheck,
+          label: "My events",
+        },
+      ]
       : []),
     ...(role === "organizer"
       ? [
-          {
-            href: "/dashboard/announcements",
-            icon: Megaphone,
-            label: "Announcements",
-          },
-          {
-            href: "/dashboard/announcements/create",
-            icon: PlusCircle,
-            label: "Create Announcement",
-          },
-          {
-            href: "/dashboard/events",
-            icon: CalendarDays,
-            label: "My Events",
-          },
-          {
-            href: "/dashboard/events/create",
-            icon: PlusCircle,
-            label: "Create Event",
-          },
-        ]
+        {
+          href: "/dashboard/announcements",
+          icon: Megaphone,
+          label: "Announcements",
+        },
+        {
+          href: "/dashboard/announcements/create",
+          icon: PlusCircle,
+          label: "Create Announcement",
+        },
+        {
+          href: "/dashboard/events",
+          icon: CalendarDays,
+          label: "My Events",
+        },
+        {
+          href: "/dashboard/events/create",
+          icon: PlusCircle,
+          label: "Create Event",
+        },
+      ]
       : []),
     ...(role === "admin"
       ? [
-          {
-            href: "/dashboard/admin/announcements",
-            icon: Megaphone,
-            label: "Announcements",
-          },
-          {
-            href: "/dashboard/admin/events",
-            icon: CalendarDays,
-            label: "Admin Approvals",
-          },
-          {
-            href: "/dashboard/admin/users",
-            icon: UserIcon,
-            label: "Manage Users",
-          },
-        ]
+        {
+          href: "/dashboard/admin/announcements",
+          icon: Megaphone,
+          label: "Announcements",
+        },
+        {
+          href: "/dashboard/admin/events",
+          icon: CalendarDays,
+          label: "Admin Approvals",
+        },
+        {
+          href: "/dashboard/admin/users",
+          icon: UserIcon,
+          label: "Manage Users",
+        },
+      ]
       : []),
     ...(!user
       ? [
-          {
-            href: "/events",
-            icon: CalendarDays,
-            label: "Events",
-          },
-        ]
+        {
+          href: "/events",
+          icon: CalendarDays,
+          label: "Events",
+        },
+      ]
       : []),
   ];
 
@@ -133,11 +133,10 @@ export default function Navigation({
     return (
       <Link
         href={link.href}
-        className={`flex items-center space-x-3 px-4 py-3 rounded-md transition-all ${
-          isActive
-            ? "bg-white/10 text-brand-orange shadow-sm"
-            : "hover:bg-white/5 text-brand-light hover:text-white"
-        } ${mobile ? "text-lg py-4" : ""}`}
+        className={`flex items-center space-x-3 px-4 py-3 rounded-md transition-all ${isActive
+          ? "bg-white/10 text-brand-orange shadow-sm"
+          : "hover:bg-white/5 text-brand-light hover:text-white"
+          } ${mobile ? "text-lg py-4" : ""}`}
       >
         <Icon size={mobile ? 24 : 20} className={isActive ? "text-brand-orange" : ""} />
         <span className="font-medium text-white">{link.label}</span>
@@ -152,11 +151,10 @@ export default function Navigation({
     return (
       <Link
         href="/dashboard/notifications"
-        className={`flex items-center space-x-3 px-4 py-3 rounded-md transition-all ${
-          isActive
-            ? "bg-white/10 text-brand-orange shadow-sm"
-            : "hover:bg-white/5 text-brand-light hover:text-white"
-        } ${mobile ? "text-lg py-4" : ""}`}
+        className={`flex items-center space-x-3 px-4 py-3 rounded-md transition-all ${isActive
+          ? "bg-white/10 text-brand-orange shadow-sm"
+          : "hover:bg-white/5 text-brand-light hover:text-white"
+          } ${mobile ? "text-lg py-4" : ""}`}
       >
         <span className="relative inline-flex shrink-0">
           <Bell size={mobile ? 24 : 20} className={isActive ? "text-brand-orange" : ""} />
@@ -183,7 +181,7 @@ export default function Navigation({
       <header className="md:hidden flex items-center justify-between bg-brand-dark text-white p-4 sticky top-0 z-50 shadow-md">
         <div className="flex items-center space-x-2">
           <h1 className="text-xl font-extrabold tracking-tight text-white">
-            GoOutJs
+            EventPlatform
           </h1>
         </div>
         <button
@@ -238,10 +236,10 @@ export default function Navigation({
       )}
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 bg-brand-dark flex-col text-white p-6 shrink-0 sticky top-0 h-screen overflow-y-auto shadow-xl">
+      <aside className="hidden md:flex w-64 bg-brand-dark flex-col text-white p-6 shrink-0 overflow-y-auto shadow-xl">
         <div className="mb-10">
           <h1 className="text-2xl font-extrabold tracking-tight">
-            GoOutJs
+            EventPlatform
           </h1>
           {user && (
             <p className="text-sm text-brand-light mt-1 capitalize">

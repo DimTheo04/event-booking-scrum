@@ -4,8 +4,8 @@ import RoleGuard from "@/components/RoleGuard";
 import EventDiscovery from "@/components/events/EventDiscovery";
 
 export const metadata: Metadata = {
-  title: "My RSVPs | GoOutJs",
-  description: "View your RSVP'd upcoming events on GoOutJs.",
+  title: "My RSVPs | EventPlatform",
+  description: "View your RSVP'd upcoming events on EventPlatform.",
 };
 
 export default function EventRsvpsPage() {
