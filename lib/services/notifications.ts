@@ -174,7 +174,7 @@ export async function notifyOrganizerRsvp(
       organizerId,
       "RSVP_NEW",
       `Someone just RSVPed to your event "${eventTitle}".`,
-      `/dashboard/events/${eventId}`
+      "/dashboard/events"
     );
   } catch (error) {
     console.error("notifyOrganizerRsvp failed:", error);
