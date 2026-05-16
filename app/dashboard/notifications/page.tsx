@@ -28,6 +28,8 @@ const TYPE_LABEL: Record<NotificationType, string> = {
   GLOBAL_ANNOUNCEMENT: "Platform Announcement",
   ORGANIZER_ANNOUNCEMENT: "Organizer Announcement",
   FOLLOWED_ORGANIZER_EVENT: "New Event from Organizer",
+  EVENT_CANCELLED: "Event Cancelled",
+  EVENT_UPDATED: "Event Updated",
 };
 
 const TYPE_COLOR: Record<NotificationType, string> = {
@@ -38,6 +40,8 @@ const TYPE_COLOR: Record<NotificationType, string> = {
   GLOBAL_ANNOUNCEMENT: "bg-amber-50 text-amber-700",
   ORGANIZER_ANNOUNCEMENT: "bg-orange-50 text-orange-700",
   FOLLOWED_ORGANIZER_EVENT: "bg-teal-50 text-teal-700",
+  EVENT_CANCELLED: "bg-rose-50 text-rose-700",
+  EVENT_UPDATED: "bg-blue-50 text-blue-700",
 };
 
 // ─── Notification Card ────────────────────────────────────────────────────────
@@ -110,7 +114,11 @@ function NotificationCard({ notification, onAction }: NotificationCardProps) {
               : "bg-[#f9fafb] text-[#172d13] border border-[#e2e8f0] hover:bg-[#e2e8f0]"
           }`}
         >
-          View
+          {notification.type === "EVENT_CANCELLED"
+            ? "Find new Events"
+            : notification.type === "EVENT_UPDATED"
+            ? "View My RSVPs"
+            : "View"}
           <ExternalLink size={12} />
         </button>
       </div>

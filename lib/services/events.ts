@@ -22,6 +22,8 @@ import {
 import {
   notifyAdminsNewEvent,
   notifyOrganizerRsvp,
+  notifyRsvpEventCancelled,
+  notifyRsvpEventUpdated,
 } from "@/lib/services/notifications";
 
 type EventStatus = "pending" | "approved" | "rejected" | "completed" | "cancelled";
@@ -302,12 +304,25 @@ export async function updateEvent(eventId: string, data: EventUpdateValues) {
   try {
     const validatedData = eventUpdateSchema.parse(data);
     const eventRef = doc(db, "events", eventId);
+
+    // Fetch current event data to get the title for notifications
+    const eventSnap = await getDoc(eventRef);
+    if (!eventSnap.exists()) {
+      return { success: false, message: "Event not found." };
+    }
+    const eventData = eventSnap.data() as EventData;
+
     const updatePayload = {
       ...validatedData,
       capacity: validatedData.capacity ?? null,
     };
 
     await updateDoc(eventRef, updatePayload);
+
+    // Notify RSVP'd users (fire-and-forget)
+    notifyRsvpEventUpdated(eventId, eventData.title).catch((err) =>
+      console.error("Failed to notify users of event update:", err)
+    );
 
     return { success: true };
   } catch (error) {
@@ -319,7 +334,21 @@ export async function updateEvent(eventId: string, data: EventUpdateValues) {
 export async function cancelEvent(eventId: string) {
   try {
     const eventRef = doc(db, "events", eventId);
+    
+    // Fetch event details to get the title for notifications
+    const eventSnap = await getDoc(eventRef);
+    if (!eventSnap.exists()) {
+      return { success: false, message: "Event not found." };
+    }
+    const eventData = eventSnap.data() as EventData;
+
     await updateDoc(eventRef, { status: "cancelled" });
+
+    // Notify RSVP'd users (fire-and-forget)
+    notifyRsvpEventCancelled(eventId, eventData.title).catch((err) =>
+      console.error("Failed to notify users of event cancellation:", err)
+    );
+
     return { success: true };
   } catch (error) {
     console.warn("Error cancelling event:", getFirebaseErrorMessage(error));

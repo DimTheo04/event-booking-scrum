@@ -21,7 +21,9 @@ export type NotificationType =
   | "EVENT_REJECTION"
   | "GLOBAL_ANNOUNCEMENT"
   | "ORGANIZER_ANNOUNCEMENT"
-  | "FOLLOWED_ORGANIZER_EVENT";
+  | "FOLLOWED_ORGANIZER_EVENT"
+  | "EVENT_CANCELLED"
+  | "EVENT_UPDATED";
 
 export interface NotificationData {
   id: string;
@@ -291,5 +293,51 @@ export async function notifyOrganizerAnnouncementAudience(
     );
   } catch (error) {
     console.error("notifyOrganizerAnnouncementAudience failed:", error);
+  }
+}
+
+/**
+ * Notify all users who RSVP'd to an event when it is cancelled.
+ */
+export async function notifyRsvpEventCancelled(
+  eventId: string,
+  eventTitle: string
+): Promise<void> {
+  try {
+    const rsvpsRef = collection(db, "events", eventId, "rsvps");
+    const snapshot = await getDocs(rsvpsRef);
+    const recipientIds = snapshot.docs.map((d) => d.id);
+
+    await createBulkNotifications(
+      recipientIds,
+      "EVENT_CANCELLED",
+      `The event "${eventTitle}" you RSVP'd to has been cancelled.`,
+      "/events"
+    );
+  } catch (error) {
+    console.error("notifyRsvpEventCancelled failed:", error);
+  }
+}
+
+/**
+ * Notify all users who RSVP'd to an event when it is updated.
+ */
+export async function notifyRsvpEventUpdated(
+  eventId: string,
+  eventTitle: string
+): Promise<void> {
+  try {
+    const rsvpsRef = collection(db, "events", eventId, "rsvps");
+    const snapshot = await getDocs(rsvpsRef);
+    const recipientIds = snapshot.docs.map((d) => d.id);
+
+    await createBulkNotifications(
+      recipientIds,
+      "EVENT_UPDATED",
+      `The event "${eventTitle}" you RSVP'd to has been updated.`,
+      "/events/rsvps"
+    );
+  } catch (error) {
+    console.error("notifyRsvpEventUpdated failed:", error);
   }
 }
