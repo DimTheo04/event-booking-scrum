@@ -50,6 +50,14 @@ const TYPE_COLOR: Record<NotificationType, string> = {
   EVENT_UPDATED: "bg-blue-50 text-blue-700",
 };
 
+function resolveNotificationActionLink(notification: NotificationData) {
+  if (notification.type === "RSVP_NEW") {
+    return "/dashboard/events";
+  }
+
+  return notification.actionLink;
+}
+
 // ─── Notification Card ────────────────────────────────────────────────────────
 
 interface NotificationCardProps {
@@ -170,7 +178,7 @@ export default function NotificationsPage() {
     if (!notification.read) {
       await markNotificationAsRead(notification.id);
     }
-    router.push(notification.actionLink);
+    router.push(resolveNotificationActionLink(notification));
   }
 
   async function handleDelete(notificationId: string) {
