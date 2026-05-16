@@ -1,9 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Bell, CheckCircle2, ExternalLink, Inbox } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Bell, CheckCircle2, ExternalLink, Inbox, X, Trash2 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
-import { markNotificationAsRead } from "@/lib/services/notifications";
+import { useAuth } from "@/context/AuthContext";
+import { 
+  markNotificationAsRead, 
+  deleteNotification, 
+  clearAllNotifications 
+} from "@/lib/services/notifications";
 import type { NotificationData, NotificationType } from "@/lib/services/notifications";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -49,15 +55,35 @@ const TYPE_COLOR: Record<NotificationType, string> = {
 interface NotificationCardProps {
   notification: NotificationData;
   onAction: (notification: NotificationData) => void;
+  onDelete: (notificationId: string) => void;
+  index: number;
 }
 
-function NotificationCard({ notification, onAction }: NotificationCardProps) {
+function NotificationCard({ notification, onAction, onDelete, index }: NotificationCardProps) {
   const label = TYPE_LABEL[notification.type] ?? "Notification";
   const tagColor = TYPE_COLOR[notification.type] ?? "bg-gray-50 text-gray-700";
   const isUnread = !notification.read;
 
   return (
-    <div
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ 
+        opacity: 0, 
+        x: 200,
+        scale: 0.95,
+        transition: { 
+          delay: index * 0.04, 
+          duration: 0.4, 
+          ease: "circOut" 
+        } 
+      }}
+      transition={{ 
+        layout: { duration: 0.3, ease: "easeOut" },
+        opacity: { duration: 0.2 },
+        y: { duration: 0.3 }
+      }}
       className={`relative flex gap-4 p-5 rounded-xl border transition-all duration-200 ${
         isUnread
           ? "bg-white border-[#6bb77b] shadow-sm"
@@ -104,8 +130,15 @@ function NotificationCard({ notification, onAction }: NotificationCardProps) {
         </p>
       </div>
 
-      {/* Action button */}
-      <div className="shrink-0 flex items-center">
+      {/* Action buttons */}
+      <div className="shrink-0 flex items-center gap-2">
+        <button
+          onClick={() => onDelete(notification.id)}
+          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          title="Delete notification"
+        >
+          <X size={18} />
+        </button>
         <button
           onClick={() => onAction(notification)}
           className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors ${
@@ -122,7 +155,7 @@ function NotificationCard({ notification, onAction }: NotificationCardProps) {
           <ExternalLink size={12} />
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -130,6 +163,7 @@ function NotificationCard({ notification, onAction }: NotificationCardProps) {
 
 export default function NotificationsPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const { notifications, unreadCount, loading } = useNotifications();
 
   async function handleAction(notification: NotificationData) {
@@ -139,25 +173,55 @@ export default function NotificationsPage() {
     router.push(notification.actionLink);
   }
 
+  async function handleDelete(notificationId: string) {
+    try {
+      await deleteNotification(notificationId);
+    } catch (error) {
+      console.error("Failed to delete notification:", error);
+    }
+  }
+
+  async function handleClearAll() {
+    if (!user?.uid) return;
+
+    try {
+      await clearAllNotifications(user.uid);
+    } catch (error) {
+      console.error("Failed to clear notifications:", error);
+    }
+  }
+
   return (
     <div className="min-h-full bg-[#f9fafb]">
       <div className="max-w-4xl mx-auto px-4 py-8 md:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-1">
-            <Bell size={26} className="text-[#172d13]" />
-            <h1 className="text-2xl font-extrabold text-[#172d13] tracking-tight">
-              Notifications
-            </h1>
-            {unreadCount > 0 && (
-              <span className="text-sm font-bold bg-[#d76f30] text-white rounded-full px-2.5 py-0.5 leading-none">
-                {unreadCount} unread
-              </span>
-            )}
+        <div className="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <Bell size={26} className="text-[#172d13]" />
+              <h1 className="text-2xl font-extrabold text-[#172d13] tracking-tight">
+                Notifications
+              </h1>
+              {unreadCount > 0 && (
+                <span className="text-sm font-bold bg-[#d76f30] text-white rounded-full px-2.5 py-0.5 leading-none">
+                  {unreadCount} unread
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-slate-500">
+              Your full notification history. Click &quot;View&quot; to be taken to the relevant page.
+            </p>
           </div>
-          <p className="text-sm text-slate-500">
-            Your full notification history. Click &quot;View&quot; to be taken to the relevant page.
-          </p>
+
+          {!loading && notifications.length > 0 && (
+            <button
+              onClick={handleClearAll}
+              className="flex items-center gap-2 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-all border border-red-100"
+            >
+              <Trash2 size={14} />
+              Clear All
+            </button>
+          )}
         </div>
 
         {/* Loading skeleton */}
@@ -198,15 +262,19 @@ export default function NotificationsPage() {
                   Unread
                 </h2>
                 <div className="space-y-3">
-                  {notifications
-                    .filter((n) => !n.read)
-                    .map((n) => (
-                      <NotificationCard
-                        key={n.id}
-                        notification={n}
-                        onAction={handleAction}
-                      />
-                    ))}
+                  <AnimatePresence mode="popLayout">
+                    {notifications
+                      .filter((n) => !n.read)
+                      .map((n, idx) => (
+                        <NotificationCard
+                          key={n.id}
+                          notification={n}
+                          onAction={handleAction}
+                          onDelete={handleDelete}
+                          index={idx}
+                        />
+                      ))}
+                  </AnimatePresence>
                 </div>
               </section>
             )}
@@ -218,15 +286,19 @@ export default function NotificationsPage() {
                   Earlier
                 </h2>
                 <div className="space-y-3">
-                  {notifications
-                    .filter((n) => n.read)
-                    .map((n) => (
-                      <NotificationCard
-                        key={n.id}
-                        notification={n}
-                        onAction={handleAction}
-                      />
-                    ))}
+                  <AnimatePresence mode="popLayout">
+                    {notifications
+                      .filter((n) => n.read)
+                      .map((n, idx) => (
+                        <NotificationCard
+                          key={n.id}
+                          notification={n}
+                          onAction={handleAction}
+                          onDelete={handleDelete}
+                          index={idx + (notifications.filter(n => !n.read).length)}
+                        />
+                      ))}
+                  </AnimatePresence>
                 </div>
               </section>
             )}

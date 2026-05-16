@@ -9,6 +9,7 @@ import {
   getDocs,
   serverTimestamp,
   writeBatch,
+  deleteDoc,
   type Timestamp,
 } from "firebase/firestore";
 
@@ -98,6 +99,43 @@ async function createBulkNotifications(
 export async function markNotificationAsRead(notificationId: string): Promise<void> {
   const notificationRef = doc(db, "notifications", notificationId);
   await updateDoc(notificationRef, { read: true });
+}
+
+/**
+ * Delete a single notification document.
+ */
+export async function deleteNotification(notificationId: string): Promise<void> {
+  const notificationRef = doc(db, "notifications", notificationId);
+  await deleteDoc(notificationRef);
+}
+
+/**
+ * Delete all notifications for a specific user.
+ */
+export async function clearAllNotifications(userId: string): Promise<void> {
+  try {
+    const notificationsRef = collection(db, "notifications");
+    const q = query(notificationsRef, where("recipientId", "==", userId));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) return;
+
+    // Split into chunks of 500 to respect Firestore batch limits
+    const BATCH_LIMIT = 500;
+    for (let i = 0; i < snapshot.docs.length; i += BATCH_LIMIT) {
+      const chunk = snapshot.docs.slice(i, i + BATCH_LIMIT);
+      const batch = writeBatch(db);
+
+      chunk.forEach((docSnap) => {
+        batch.delete(docSnap.ref);
+      });
+
+      await batch.commit();
+    }
+  } catch (error) {
+    console.error("clearAllNotifications failed:", error);
+    throw error;
+  }
 }
 
 // ─── Trigger Helpers ──────────────────────────────────────────────────────────
