@@ -1,12 +1,36 @@
-import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, query, where } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { collection, getDoc, getDocs, doc, updateDoc, query, where } from "firebase/firestore";
+import { roleUpdateSchema } from "@/lib/schemas";
 import { EventData } from "./events";
+import {
+  notifyOrganizerEventStatus,
+  notifyFollowersNewEvent,
+} from "@/lib/services/notifications";
 
 export interface UserData {
   id: string;
   email: string;
   displayName: string;
   role: string;
+}
+
+export type PendingEventData = EventData & {
+  organizerName: string;
+};
+
+async function getOrganizerName(organizerId: string) {
+  if (!organizerId) {
+    return "Unknown organizer";
+  }
+
+  const organizerRef = doc(db, "users", organizerId);
+  const organizerSnap = await getDoc(organizerRef);
+  const organizerData = organizerSnap.data();
+  const displayName = organizerData?.displayName;
+
+  return typeof displayName === "string" && displayName.trim()
+    ? displayName.trim()
+    : "Unknown organizer";
 }
 
 // Event Moderation Services
@@ -16,10 +40,17 @@ export async function getPendingEvents() {
     const q = query(eventsRef, where("status", "==", "pending"));
     const querySnapshot = await getDocs(q);
     
-    const events: EventData[] = [];
-    querySnapshot.forEach((doc) => {
-      events.push({ id: doc.id, ...doc.data() } as EventData);
-    });
+    const events = await Promise.all(
+      querySnapshot.docs.map(async (eventDoc) => {
+        const event = { id: eventDoc.id, ...eventDoc.data() } as EventData;
+        const organizerName = await getOrganizerName(event.organizerId);
+
+        return {
+          ...event,
+          organizerName,
+        };
+      })
+    );
     
     // Sort client-side
     events.sort((a, b) => {
@@ -35,14 +66,38 @@ export async function getPendingEvents() {
   }
 }
 
-export async function updateEventStatus(eventId: string, status: "approved" | "rejected", reason?: string) {
+export async function updateEventStatus(eventId: string, status: "approved" | "rejected", rejectReason?: string) {
   try {
     const eventRef = doc(db, "events", eventId);
-    const updateData: any = { status };
-    if (reason) {
-      updateData.rejectionReason = reason;
+    const eventSnap = await getDoc(eventRef);
+    const eventData = eventSnap.data();
+    const eventTitle: string = eventData?.title ?? "Unknown event";
+    const organizerId: string = eventData?.organizerId ?? "";
+    const eventDateTime = eventData?.dateTime;
+    const isPastEvent =
+      status === "approved" &&
+      typeof eventDateTime === "string" &&
+      Date.parse(eventDateTime) <= Date.now();
+    const nextStatus = isPastEvent ? "completed" : status;
+    const updateData: { status: "approved" | "rejected" | "completed"; rejectReason?: string } = {
+      status: nextStatus,
+    };
+
+    if (rejectReason) {
+      updateData.rejectReason = rejectReason;
     }
     await updateDoc(eventRef, updateData);
+
+    // Notify the organizer of the decision (fire-and-forget)
+    if (organizerId) {
+      notifyOrganizerEventStatus(organizerId, eventTitle, status).catch(console.error);
+    }
+
+    // If approved (and not immediately completed), notify the organizer's followers
+    if (status === "approved" && nextStatus === "approved" && organizerId) {
+      notifyFollowersNewEvent(organizerId, eventId, eventTitle).catch(console.error);
+    }
+
     return { success: true };
   } catch (error) {
     console.error("Error updating event status:", error);
@@ -70,11 +125,42 @@ export async function getAllUsers() {
 
 export async function updateUserRole(userId: string, newRole: string) {
   try {
+    const validated = roleUpdateSchema.parse({ role: newRole });
     const userRef = doc(db, "users", userId);
-    await updateDoc(userRef, { role: newRole });
+    await updateDoc(userRef, { role: validated.role });
     return { success: true };
   } catch (error) {
     console.error("Error updating user role:", error);
+    return { success: false, error };
+  }
+}
+
+export async function deleteUser(userId: string) {
+  try {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      return { success: false, error: new Error("You must be signed in.") };
+    }
+
+    const token = await currentUser.getIdToken();
+    const response = await fetch(`/api/admin/users/${encodeURIComponent(userId)}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      return {
+        success: false,
+        error: payload?.error ?? "Failed to delete user.",
+      };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting user:", error);
     return { success: false, error };
   }
 }

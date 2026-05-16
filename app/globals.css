@@ -124,13 +124,22 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
+    font-size: 14px;
   }
-  
+
+  @media (min-width: 768px) {
+    html {
+      font-size: 16px;
+    }
+  }
+
   /* Make datetime-local input fully clickable */
   input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     background: transparent;

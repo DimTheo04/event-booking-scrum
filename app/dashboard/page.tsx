@@ -1,6 +1,8 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
+import AttendeeFollows from "@/components/dashboard/AttendeeFollows";
+import OrganizerFollowers from "@/components/dashboard/OrganizerFollowers";
 
 export default function DashboardPage() {
   const { userData } = useAuth();
@@ -47,6 +49,9 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {userData.role === "attendee" && <AttendeeFollows />}
+        {userData.role === "organizer" && <OrganizerFollowers />}
       </div>
     </div>
   );

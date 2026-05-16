@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { eventCreationSchema, type EventCreationFormValues } from "@/lib/schemas";
 import { createEvent } from "@/lib/services/events";
 import { useRouter } from "next/navigation";
@@ -30,12 +29,21 @@ import { Textarea } from "@/components/ui/textarea";
 
 
 
+function getMinDateTimeLocalValue() {
+  const now = new Date();
+  now.setSeconds(0, 0);
+
+  const timezoneOffsetMs = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - timezoneOffsetMs).toISOString().slice(0, 16);
+}
+
 export default function EventCreateForm({ organizerId }: { organizerId: string }) {
   const router = useRouter();
   const [isSuccess, setIsSuccess] = useState(false);
+  const minDateTime = getMinDateTimeLocalValue();
 
   const form = useForm<EventCreationFormValues>({
-    resolver: zodResolver(eventCreationSchema) as any,
+    resolver: zodResolver(eventCreationSchema) as Resolver<EventCreationFormValues>,
     defaultValues: {
       title: "",
       description: "",
@@ -63,7 +71,7 @@ export default function EventCreateForm({ organizerId }: { organizerId: string }
       }, 1500);
     } else {
       form.setError("root", {
-        message: "Failed to create event. Please try again later.",
+        message: res.message || "Failed to create event. Please try again later.",
       });
     }
   }
@@ -167,6 +175,7 @@ export default function EventCreateForm({ organizerId }: { organizerId: string }
                       <CalendarDays className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
                       <Input
                         type="datetime-local"
+                        min={minDateTime}
                         className="pl-9 w-full bg-white border-slate-300 focus:ring-brand-orange/30 rounded-md transition-colors text-sm"
                         {...field}
                       />

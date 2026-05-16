@@ -62,8 +62,8 @@ export default function RoleGuard({
 
     if (guestOnly) {
       // Route is for guests only (e.g. /login, /register)
-      // Redirect authenticated users to the dashboard
-      if (user) {
+      // Redirect verified authenticated users to the dashboard
+      if (user?.emailVerified) {
         router.replace("/dashboard");
       }
       return;
@@ -71,6 +71,12 @@ export default function RoleGuard({
 
     if (requireAuth && !user) {
       // Route requires auth and the user is not logged in
+      router.replace("/login");
+      return;
+    }
+
+    if (requireAuth && user && !user.emailVerified) {
+      // Users must verify their email before entering protected areas
       router.replace("/login");
       return;
     }
@@ -88,11 +94,14 @@ export default function RoleGuard({
   // Always show spinner while resolving auth
   if (loading) return <LoadingScreen />;
 
-  // Guest-only: hide content from logged-in users while redirect fires
-  if (guestOnly && user) return null;
+  // Guest-only: hide content from verified logged-in users while redirect fires
+  if (guestOnly && user?.emailVerified) return null;
 
   // Auth-required: hide content from guests while redirect fires
   if (requireAuth && !user) return null;
+
+  // Auth-required: hide content from unverified users while redirect fires
+  if (requireAuth && user && !user.emailVerified) return null;
 
   // Role-restricted: hide content from wrong-role users while redirect fires
   if (user && allowedRoles && allowedRoles.length > 0) {
