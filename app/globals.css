@@ -131,6 +131,13 @@
 
   html {
     @apply font-sans;
+    font-size: 14px;
+  }
+
+  @media (min-width: 768px) {
+    html {
+      font-size: 16px;
+    }
   }
 
   /* Make datetime-local input fully clickable */

@@ -88,25 +88,31 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50 flex-col md:flex-row">
+    <div className="flex min-h-screen bg-brand-dark md:bg-gray-50 flex-col md:flex-row">
       {/* Brand Panel - Hidden on mobile, visible on desktop */}
       <div className="hidden md:flex md:w-1/2 bg-brand-dark flex-col justify-center p-12 text-white">
         <div className="max-w-lg mx-auto">
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight">Welcome Back.</h1>
-          <p className="text-lg text-brand-light leading-relaxed">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight leading-tight">
+            Welcome <br /> Back.
+          </h1>
+          <p className="text-lg text-brand-light leading-relaxed font-medium opacity-90">
             Sign in to your account to manage your events, discover new experiences, and connect with organizers.
           </p>
         </div>
       </div>
 
       {/* Form Panel */}
-      <div className="flex flex-1 flex-col items-center justify-center p-4 sm:p-8 lg:p-12">
-        <div className="w-full max-w-md space-y-8 p-8 bg-white rounded-xl shadow-sm border border-slate-200">
-          <div>
-            <h2 className="text-center text-3xl font-bold text-brand-dark">
-              Sign in to your account
+      <div className="flex flex-1 flex-col items-center justify-center p-6 sm:p-12">
+        <div className="w-full max-w-md space-y-10 md:p-10 md:bg-white md:rounded-3xl md:shadow-xl md:border md:border-slate-100">
+          <div className="space-y-2">
+            <h2 className="text-3xl md:text-4xl font-black text-white md:text-brand-dark tracking-tight">
+              Sign In
             </h2>
+            <p className="text-brand-light md:text-slate-500 font-medium">
+              Enter your credentials to access your account.
+            </p>
           </div>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -114,9 +120,14 @@ export default function LoginPage() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel className="text-white/80 md:text-slate-700 font-bold uppercase tracking-wider text-[10px]">Email Address</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="john@example.com" {...field} />
+                    <Input 
+                      type="email" 
+                      placeholder="john@example.com" 
+                      className="h-12 bg-white/5 md:bg-white border-white/10 md:border-slate-200 text-white md:text-brand-dark placeholder:text-white/20 md:placeholder:text-slate-400"
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -128,9 +139,14 @@ export default function LoginPage() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel className="text-white/80 md:text-slate-700 font-bold uppercase tracking-wider text-[10px]">Password</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="********" {...field} />
+                    <Input 
+                      type="password" 
+                      placeholder="********" 
+                      className="h-12 bg-white/5 md:bg-white border-white/10 md:border-slate-200 text-white md:text-brand-dark placeholder:text-white/20 md:placeholder:text-slate-400"
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -138,29 +154,35 @@ export default function LoginPage() {
             />
 
             {form.formState.errors.root && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm font-medium animate-in fade-in slide-in-from-top-1">
+              <div className="bg-red-500/10 border border-red-500/20 text-red-500 px-4 py-3 rounded-xl text-sm font-bold animate-in fade-in slide-in-from-top-1">
                 {form.formState.errors.root.message}
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+            <Button type="submit" className="w-full h-12 text-base font-bold bg-brand-orange hover:bg-brand-orange/90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-brand-orange/20" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting ? "Signing in..." : "Sign In"}
             </Button>
           </form>
         </Form>
-        <p className="text-center text-sm text-slate-600 mt-4">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="font-medium text-brand-orange hover:opacity-80 transition-opacity">
-            Sign up
-          </Link>
-        </p>
-        <div className="text-center">
-          <Link
-            href="/events"
-            className="text-sm font-medium text-brand-orange underline underline-offset-4 hover:opacity-80 transition-opacity"
-          >
-            Continue as guest
-          </Link>
+
+        <div className="space-y-6 pt-4 text-center">
+          <p className="text-sm text-brand-light md:text-slate-500 font-medium">
+            Don&apos;t have an account?{" "}
+            <Link href="/register" className="text-brand-orange font-bold hover:underline underline-offset-4">
+              Create one
+            </Link>
+          </p>
+          
+          <div className="flex items-center justify-center gap-2">
+            <div className="h-[1px] w-8 bg-white/10 md:bg-slate-200" />
+            <Link
+              href="/events"
+              className="text-xs font-bold text-white md:text-slate-400 hover:text-brand-orange transition-colors uppercase tracking-widest"
+            >
+              Continue as guest
+            </Link>
+            <div className="h-[1px] w-8 bg-white/10 md:bg-slate-200" />
+          </div>
         </div>
       </div>
     </div>

@@ -200,7 +200,7 @@ export default function OrganizerRsvpCharts({
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-      <div className="rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-6 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-5">
           <h3 className="text-lg font-bold text-brand-dark">RSVP Count Per Event</h3>
           <p className="mt-1 text-sm text-slate-500">
@@ -213,7 +213,7 @@ export default function OrganizerRsvpCharts({
         />
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fff7ed_100%)] p-6 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-5">
           <h3 className="text-lg font-bold text-brand-dark">Revenue Per Event</h3>
           <p className="mt-1 text-sm text-slate-500">
@@ -227,7 +227,7 @@ export default function OrganizerRsvpCharts({
         />
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f0fdf4_100%)] p-6 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-5">
           <h3 className="text-lg font-bold text-brand-dark">Event Status Distribution</h3>
           <p className="mt-1 text-sm text-slate-500">
@@ -237,7 +237,7 @@ export default function OrganizerRsvpCharts({
         <DistributionBar segments={statusCounts} />
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#eff6ff_100%)] p-6 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-5">
           <h3 className="text-lg font-bold text-brand-dark">Event Category Distribution</h3>
           <p className="mt-1 text-sm text-slate-500">

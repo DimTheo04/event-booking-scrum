@@ -9,8 +9,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "EventPlatform — Discover & Book Events",
-  description: "Browse, create, and manage events on EventPlatform.",
+  title: "GoOutJs — Discover & Book Events",
+  description: "Browse, create, and manage events on GoOutJs.",
 };
 
 export default function RootLayout({

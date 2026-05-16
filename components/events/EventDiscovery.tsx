@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import {
-  Bell,
   CalendarDays,
   CheckCircle2,
   Filter,
@@ -22,6 +21,8 @@ import {
   UserPlus,
   UserMinus,
 } from "lucide-react";
+import Navigation from "@/components/layout/Navigation";
+import { Footer } from "@/components/layout/Footer";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,6 +105,8 @@ function getRsvpUnavailableReason(
 
   return null;
 }
+
+
 
 export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
   const { user, userData, loading: authLoading } = useAuth();
@@ -373,76 +376,6 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
     router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`);
   }
 
-  const navLinks = [
-    ...(user ? [{ href: "/dashboard", icon: UserIcon, label: "Profile" }] : []),
-    ...(role === "attendee"
-      ? [
-          {
-            href: "/dashboard/announcements",
-            icon: Megaphone,
-            label: "Announcements",
-          },
-          {
-            href: "/events",
-            icon: CalendarDays,
-            label: "All events",
-          },
-          {
-            href: "/events/rsvps",
-            icon: TicketCheck,
-            label: "My events",
-          },
-        ]
-      : []),
-    ...(role === "organizer"
-      ? [
-          {
-            href: "/dashboard/announcements",
-            icon: Megaphone,
-            label: "Announcements",
-          },
-          {
-            href: "/dashboard/events",
-            icon: CalendarDays,
-            label: "My Events",
-          },
-          {
-            href: "/dashboard/events/create",
-            icon: PlusCircle,
-            label: "Create Event",
-          },
-        ]
-      : []),
-    ...(role === "admin"
-      ? [
-          {
-            href: "/dashboard/admin/announcements",
-            icon: Megaphone,
-            label: "Announcements",
-          },
-          {
-            href: "/dashboard/admin/events",
-            icon: CalendarDays,
-            label: "Admin Approvals",
-          },
-          {
-            href: "/dashboard/admin/users",
-            icon: UserIcon,
-            label: "Manage Users",
-          },
-        ]
-      : []),
-    ...(!user
-      ? [
-          {
-            href: "/events",
-            icon: CalendarDays,
-            label: "Events",
-          },
-        ]
-      : []),
-  ];
-
   if (!authLoading && (role === "admin" || role === "organizer")) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -454,125 +387,29 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50 flex-col md:flex-row">
-      <aside className="md:w-64 bg-brand-dark flex flex-col text-white p-6 shrink-0">
-        <div className="mb-10">
-          <h1 className="text-2xl font-extrabold tracking-tight">
-            EventPlatform
-          </h1>
-          {user && (
-            <p className="text-sm text-brand-light mt-1 capitalize">
-              {userData?.role ?? "user"} Dashboard
-            </p>
-          )}
-        </div>
+    <div className="flex min-h-screen bg-gray-50 flex-col md:flex-row overflow-hidden">
+      <Navigation
+        user={user}
+        userData={userData}
+        unreadCount={unreadCount}
+        handleSignOut={handleSignOut}
+      />
 
-        <nav className="flex-1 space-y-2">
-          {navLinks.map((link) => {
-            const Icon = link.icon;
-            const isActive = pathname === link.href;
 
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-md transition-colors ${
-                  isActive
-                    ? "bg-white/10 text-brand-orange"
-                    : "hover:bg-white/5 text-brand-light hover:text-white"
-                }`}
-              >
-                <Icon
-                  size={20}
-                  className={isActive ? "text-brand-orange" : ""}
-                />
-                <span className="font-medium text-white">{link.label}</span>
-              </Link>
-            );
-          })}
-
-          {/* Notifications — shown for authenticated users */}
-          {user && (
-            <Link
-              href="/dashboard/notifications"
-              className={`flex items-center space-x-3 px-4 py-3 rounded-md transition-colors ${
-                pathname === "/dashboard/notifications"
-                  ? "bg-white/10 text-brand-orange"
-                  : "hover:bg-white/5 text-brand-light hover:text-white"
-              }`}
-            >
-              <span className="relative inline-flex shrink-0">
-                <Bell
-                  size={20}
-                  className={
-                    pathname === "/dashboard/notifications"
-                      ? "text-brand-orange"
-                      : ""
-                  }
-                />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-orange" />
-                  </span>
-                )}
-              </span>
-              <span className="font-medium text-white">Notifications</span>
-              {unreadCount > 0 && (
-                <span className="ml-auto text-xs font-bold bg-brand-orange text-white rounded-full px-1.5 py-0.5 leading-none">
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
-              )}
-            </Link>
-          )}
-        </nav>
-
-        <div className="mt-auto pt-6 border-t border-white/10">
-          {authLoading ? (
-            <p className="px-2 text-sm text-brand-light">Loading account...</p>
-          ) : user ? (
-            <>
-              <div className="mb-4 px-2">
-                <p className="text-sm font-medium truncate">
-                  {userData?.displayName || user.email || "Signed in"}
-                </p>
-                <p className="text-xs text-brand-light truncate">
-                  {userData?.email || user.email}
+      <div className="flex-1 flex flex-col min-h-screen overflow-y-auto overflow-x-hidden">
+        <main className="flex-1">
+          <div className="p-8 lg:p-12">
+            <div className="max-w-6xl mx-auto space-y-8">
+              <div>
+                <h2 className="text-3xl font-bold text-brand-dark">
+                  {isRsvpView ? "My Events" : "Events"}
+                </h2>
+                <p className="text-slate-600 mt-2">
+                  {isRsvpView
+                    ? "Review the upcoming events you have RSVPed to."
+                    : "Discover approved upcoming events from organizers across the platform."}
                 </p>
               </div>
-              <button
-                onClick={handleSignOut}
-                className="flex items-center space-x-3 px-4 py-3 w-full text-left hover:bg-white/5 text-brand-orange rounded-md transition-colors"
-              >
-                <LogOut size={20} />
-                <span className="font-medium text-white">Sign Out</span>
-              </button>
-            </>
-          ) : (
-            <Link
-              href="/login"
-              className="flex items-center space-x-3 px-4 py-3 w-full text-left hover:bg-white/5 text-brand-orange rounded-md transition-colors"
-            >
-              <LogIn size={20} />
-              <span className="font-medium text-white">Sign In</span>
-            </Link>
-          )}
-        </div>
-      </aside>
-
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8 lg:p-12">
-          <div className="max-w-6xl mx-auto space-y-8">
-            <div>
-              <h2 className="text-3xl font-bold text-brand-dark">
-                {isRsvpView ? "My Events" : "Events"}
-              </h2>
-              <p className="text-slate-600 mt-2">
-                {isRsvpView
-                  ? "Review the upcoming events you have RSVPed to."
-                  : "Discover approved upcoming events from organizers across the platform."}
-              </p>
-            </div>
 
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-4">
               <div className="flex items-center gap-2 text-brand-dark font-medium">
@@ -953,7 +790,9 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
             )}
           </div>
         </div>
-      </main>
+        </main>
+        <Footer />
+      </div>
 
       {selectedEvent && (
         <EventDetailsModal

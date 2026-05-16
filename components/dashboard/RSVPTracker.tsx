@@ -44,9 +44,9 @@ function formatCurrency(value: number) {
 function formatDateTimeDisplay(dateTime: string) {
   return dateTime
     ? new Date(dateTime).toLocaleString(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short",
-      })
+      dateStyle: "medium",
+      timeStyle: "short",
+    })
     : "TBD";
 }
 
@@ -234,10 +234,10 @@ export default function RSVPTracker({ organizerId }: { organizerId: string }) {
       currentEvents.map((currentEvent) =>
         currentEvent.id === event.id
           ? {
-              ...currentEvent,
-              ...nextValues,
-              capacity: nextValues.capacity ?? null,
-            }
+            ...currentEvent,
+            ...nextValues,
+            capacity: nextValues.capacity ?? null,
+          }
           : currentEvent
       )
     );
@@ -290,12 +290,11 @@ export default function RSVPTracker({ organizerId }: { organizerId: string }) {
     <>
       <div className="space-y-6">
         <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-          <div className="relative overflow-hidden border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(251,146,60,0.22),_transparent_34%),linear-gradient(135deg,#fff7ed_0%,#ffffff_50%,#f8fafc_100%)] px-6 py-6 sm:px-8">
+          <div className="relative overflow-hidden border-b border-slate-200 bg-white px-6 py-6 sm:px-8">
             <div className="absolute right-0 top-0 h-32 w-32 rounded-full bg-brand-orange/10 blur-3xl" />
             <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
               <div className="max-w-2xl">
                 <div className="inline-flex items-center gap-2 rounded-full border border-brand-orange/20 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-brand-dark">
-                  <Sparkles size={14} className="text-brand-orange" />
                   RSVP Dashboard
                 </div>
                 <h3 className="mt-4 text-2xl font-bold tracking-tight text-brand-dark sm:text-3xl">
@@ -323,7 +322,7 @@ export default function RSVPTracker({ organizerId }: { organizerId: string }) {
           </div>
 
           <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2 xl:grid-cols-4 xl:p-6">
-            <div className="group rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-sm transition-transform duration-200 hover:-translate-y-0.5">
+            <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-transform duration-200 hover:-translate-y-0.5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-medium text-slate-500">Total Events</p>
@@ -338,7 +337,7 @@ export default function RSVPTracker({ organizerId }: { organizerId: string }) {
               </p>
             </div>
 
-            <div className="group rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fff7ed_100%)] p-5 shadow-sm transition-transform duration-200 hover:-translate-y-0.5">
+            <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-transform duration-200 hover:-translate-y-0.5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-medium text-slate-500">Total RSVPs</p>
@@ -353,7 +352,7 @@ export default function RSVPTracker({ organizerId }: { organizerId: string }) {
               </p>
             </div>
 
-            <div className="group rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f0fdf4_100%)] p-5 shadow-sm transition-transform duration-200 hover:-translate-y-0.5">
+            <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-transform duration-200 hover:-translate-y-0.5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-medium text-slate-500">Total Revenue</p>
@@ -370,7 +369,7 @@ export default function RSVPTracker({ organizerId }: { organizerId: string }) {
               </p>
             </div>
 
-            <div className="group rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#eff6ff_100%)] p-5 shadow-sm transition-transform duration-200 hover:-translate-y-0.5">
+            <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-transform duration-200 hover:-translate-y-0.5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-medium text-slate-500">Active vs Past</p>
@@ -444,11 +443,10 @@ export default function RSVPTracker({ organizerId }: { organizerId: string }) {
               return (
                 <div
                   key={event.id}
-                  className={`bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col transition-shadow cursor-pointer ${
-                    isCancelled
+                  className={`bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col transition-shadow cursor-pointer ${isCancelled
                       ? "border-red-200"
                       : "border-slate-200 hover:shadow-md"
-                  }`}
+                    }`}
                   onClick={() => openEventDetails(event)}
                   onKeyDown={(keyboardEvent) => {
                     if (keyboardEvent.key === "Enter" || keyboardEvent.key === " ") {

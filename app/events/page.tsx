@@ -4,8 +4,8 @@ import RoleGuard from "@/components/RoleGuard";
 import EventDiscovery from "@/components/events/EventDiscovery";
 
 export const metadata: Metadata = {
-  title: "Events | EventPlatform",
-  description: "Discover approved upcoming events on EventPlatform.",
+  title: "Events | GoOutJs",
+  description: "Discover approved upcoming events on GoOutJs.",
 };
 
 export default function EventsPage() {
