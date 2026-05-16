@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import {
+  Bell,
   CalendarDays,
   CheckCircle2,
   Filter,
@@ -18,6 +19,8 @@ import {
   Users,
   Megaphone,
   PlusCircle,
+  UserPlus,
+  UserMinus,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -35,6 +38,9 @@ import {
   toggleEventRsvp,
   type DiscoverableEventData,
 } from "@/lib/services/events";
+import { getFollowingIds, toggleFollow } from "@/lib/services/follows";
+import { Switch } from "@/components/ui/switch";
+import { useNotifications } from "@/hooks/useNotifications";
 
 type EventsView = "all" | "rsvps";
 
@@ -101,6 +107,7 @@ function getRsvpUnavailableReason(
 
 export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
   const { user, userData, loading: authLoading } = useAuth();
+  const { unreadCount } = useNotifications();
   const role = userData?.role?.toLowerCase();
   const router = useRouter();
   const pathname = usePathname();
@@ -117,6 +124,43 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
   const [loginPromptOpen, setLoginPromptOpen] = useState(false);
   const [filters, setFilters] =
     useState<EventDiscoveryFilterValues>(defaultFilters);
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+  const [showOnlyFollowing, setShowOnlyFollowing] = useState(false);
+  const [followLoadingId, setFollowLoadingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let ignore = false;
+    async function fetchFollowing() {
+      if (!user || role !== "attendee") {
+        setFollowingIds(new Set());
+        return;
+      }
+      const res = await getFollowingIds(user.uid);
+      if (!ignore && res.success) {
+        setFollowingIds(res.followingIds);
+      }
+    }
+    fetchFollowing();
+    return () => {
+      ignore = true;
+    };
+  }, [user, role]);
+
+  async function handleFollowToggle(organizerId: string, event: React.MouseEvent) {
+    event.stopPropagation();
+    if (!user || role !== "attendee") return;
+    setFollowLoadingId(organizerId);
+    const res = await toggleFollow(user.uid, organizerId);
+    if (res.success) {
+      setFollowingIds((current) => {
+        const next = new Set(current);
+        if (res.isFollowing) next.add(organizerId);
+        else next.delete(organizerId);
+        return next;
+      });
+    }
+    setFollowLoadingId(null);
+  }
 
   useEffect(() => {
     async function fetchEvents() {
@@ -196,11 +240,13 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
       const matchesStartDate = startTime === null || eventTime >= startTime;
       const matchesEndDate = endTime === null || eventTime <= endTime;
 
+      const matchesFollowing = !showOnlyFollowing || followingIds.has(event.organizerId);
+
       return (
-        matchesCategory && matchesSearch && matchesStartDate && matchesEndDate
+        matchesCategory && matchesSearch && matchesStartDate && matchesEndDate && matchesFollowing
       );
     });
-  }, [events, sanitizedFilters]);
+  }, [events, sanitizedFilters, showOnlyFollowing, followingIds]);
 
   const visibleEvents = useMemo(() => {
     if (view !== "rsvps") {
@@ -444,6 +490,41 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
               </Link>
             );
           })}
+
+          {/* Notifications — shown for authenticated users */}
+          {user && (
+            <Link
+              href="/dashboard/notifications"
+              className={`flex items-center space-x-3 px-4 py-3 rounded-md transition-colors ${
+                pathname === "/dashboard/notifications"
+                  ? "bg-white/10 text-brand-orange"
+                  : "hover:bg-white/5 text-brand-light hover:text-white"
+              }`}
+            >
+              <span className="relative inline-flex shrink-0">
+                <Bell
+                  size={20}
+                  className={
+                    pathname === "/dashboard/notifications"
+                      ? "text-brand-orange"
+                      : ""
+                  }
+                />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-orange" />
+                  </span>
+                )}
+              </span>
+              <span className="font-medium text-white">Notifications</span>
+              {unreadCount > 0 && (
+                <span className="ml-auto text-xs font-bold bg-brand-orange text-white rounded-full px-1.5 py-0.5 leading-none">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </Link>
+          )}
         </nav>
 
         <div className="mt-auto pt-6 border-t border-white/10">
@@ -542,13 +623,32 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
                 />
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                {role === "attendee" && (
+                  <div className="flex items-center space-x-3">
+                    <Switch
+                      id="show-following"
+                      checked={showOnlyFollowing}
+                      onCheckedChange={setShowOnlyFollowing}
+                    />
+                    <label
+                      htmlFor="show-following"
+                      className="text-sm font-medium text-brand-dark cursor-pointer select-none"
+                    >
+                      Show only following
+                    </label>
+                  </div>
+                )}
+                <div className="flex-1" />
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setFilters(defaultFilters)}
-                  disabled={!hasActiveFilters}
+                  onClick={() => {
+                    setFilters(defaultFilters);
+                    setShowOnlyFollowing(false);
+                  }}
+                  disabled={!hasActiveFilters && !showOnlyFollowing}
                 >
                   Clear all filters
                 </Button>
@@ -650,7 +750,7 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
                           <h3 className="text-lg font-bold text-brand-dark">
                             {event.title}
                           </h3>
-                          <div className="grid gap-2 text-sm text-slate-600 md:grid-cols-3">
+                          <div className="flex flex-col gap-2 text-sm text-slate-600">
                             <span className="flex items-center gap-2">
                               <CalendarDays
                                 size={16}
@@ -667,15 +767,38 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
                                 {event.location || "Location TBD"}
                               </span>
                             </span>
-                            <span className="flex items-center gap-2">
-                              <UserIcon
-                                size={16}
-                                className="shrink-0 text-brand-light"
-                              />
-                              <span className="truncate">
-                                {event.organizerName}
+                            <div className="flex items-center gap-2">
+                              <span className="flex items-center gap-2 min-w-0">
+                                <UserIcon
+                                  size={16}
+                                  className="shrink-0 text-brand-light"
+                                />
+                                <span className="truncate">
+                                  {event.organizerName}
+                                </span>
                               </span>
-                            </span>
+                              {role === "attendee" && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className={`h-8 px-4 text-xs ml-2 shrink-0 font-bold rounded-full transition-all shadow-sm bg-brand-orange !text-white hover:bg-brand-orange/90 active:scale-95`}
+                                  onClick={(e) => handleFollowToggle(event.organizerId, e)}
+                                  disabled={followLoadingId === event.organizerId}
+                                >
+                                  {followingIds.has(event.organizerId) ? (
+                                    <>
+                                      <UserMinus size={14} className="mr-1.5" />
+                                      Unfollow Organizer
+                                    </>
+                                  ) : (
+                                    <>
+                                      <UserPlus size={14} className="mr-1.5" />
+                                      Follow Organizer
+                                    </>
+                                  )}
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
 
@@ -770,14 +893,37 @@ export default function EventDiscovery({ view = "all" }: EventDiscoveryProps) {
                             {event.location || "Location TBD"}
                           </span>
                         </div>
-                        <div className="flex items-start gap-2 text-sm text-slate-600">
-                          <UserIcon
-                            size={16}
-                            className="mt-0.5 shrink-0 text-brand-light"
-                          />
-                          <span className="line-clamp-1">
-                            {event.organizerName}
+                        <div className="flex items-center justify-between gap-2 text-sm text-slate-600 mt-2">
+                          <span className="flex items-center gap-2 min-w-0">
+                            <UserIcon
+                              size={16}
+                              className="shrink-0 text-brand-light"
+                            />
+                            <span className="line-clamp-1">
+                              {event.organizerName}
+                            </span>
                           </span>
+                          {role === "attendee" && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              className={`h-8 px-4 text-xs shrink-0 font-bold rounded-full transition-all shadow-sm bg-brand-orange !text-white hover:bg-brand-orange/90 active:scale-95`}
+                              onClick={(e) => handleFollowToggle(event.organizerId, e)}
+                              disabled={followLoadingId === event.organizerId}
+                            >
+                              {followingIds.has(event.organizerId) ? (
+                                <>
+                                  <UserMinus size={14} className="mr-1.5" />
+                                  Unfollow Organizer
+                                </>
+                              ) : (
+                                <>
+                                  <UserPlus size={14} className="mr-1.5" />
+                                  Follow Organizer
+                                </>
+                              )}
+                            </Button>
+                          )}
                         </div>
                       </div>
 

@@ -1,6 +1,11 @@
 import { auth, db } from "@/lib/firebase";
 import { collection, getDoc, getDocs, doc, updateDoc, query, where } from "firebase/firestore";
+import { roleUpdateSchema } from "@/lib/schemas";
 import { EventData } from "./events";
+import {
+  notifyOrganizerEventStatus,
+  notifyFollowersNewEvent,
+} from "@/lib/services/notifications";
 
 export interface UserData {
   id: string;
@@ -65,7 +70,10 @@ export async function updateEventStatus(eventId: string, status: "approved" | "r
   try {
     const eventRef = doc(db, "events", eventId);
     const eventSnap = await getDoc(eventRef);
-    const eventDateTime = eventSnap.data()?.dateTime;
+    const eventData = eventSnap.data();
+    const eventTitle: string = eventData?.title ?? "Unknown event";
+    const organizerId: string = eventData?.organizerId ?? "";
+    const eventDateTime = eventData?.dateTime;
     const isPastEvent =
       status === "approved" &&
       typeof eventDateTime === "string" &&
@@ -79,6 +87,17 @@ export async function updateEventStatus(eventId: string, status: "approved" | "r
       updateData.rejectReason = rejectReason;
     }
     await updateDoc(eventRef, updateData);
+
+    // Notify the organizer of the decision (fire-and-forget)
+    if (organizerId) {
+      notifyOrganizerEventStatus(organizerId, eventTitle, status).catch(console.error);
+    }
+
+    // If approved (and not immediately completed), notify the organizer's followers
+    if (status === "approved" && nextStatus === "approved" && organizerId) {
+      notifyFollowersNewEvent(organizerId, eventId, eventTitle).catch(console.error);
+    }
+
     return { success: true };
   } catch (error) {
     console.error("Error updating event status:", error);
@@ -106,8 +125,9 @@ export async function getAllUsers() {
 
 export async function updateUserRole(userId: string, newRole: string) {
   try {
+    const validated = roleUpdateSchema.parse({ role: newRole });
     const userRef = doc(db, "users", userId);
-    await updateDoc(userRef, { role: newRole });
+    await updateDoc(userRef, { role: validated.role });
     return { success: true };
   } catch (error) {
     console.error("Error updating user role:", error);

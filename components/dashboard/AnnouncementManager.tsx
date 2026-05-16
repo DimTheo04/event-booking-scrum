@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useForm, type Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { announcementSchema, type AnnouncementFormValues } from "@/lib/schemas";
 import { 
   createAnnouncement, 
   getOrganizerAnnouncements, 
@@ -11,22 +14,64 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Megaphone, Trash2, Edit2, Clock } from "lucide-react";
+
+function formatAudienceLabel(targetAudience?: string) {
+  switch (targetAudience) {
+    case "attendee":
+      return "Attendees";
+    case "organizer":
+      return "Organizers";
+    case "followers":
+      return "Followers";
+    case "rsvps":
+      return "RSVP Attendees";
+    case "followers_and_rsvps":
+      return "Followers + RSVPs";
+    default:
+      return "All Users";
+  }
+}
 
 export default function AnnouncementManager({ organizerId, isAdmin = false }: { organizerId: string, isAdmin?: boolean }) {
   const [announcements, setAnnouncements] = useState<AnnouncementData[]>([]);
   const [loading, setLoading] = useState(true);
+  const defaultTargetAudience: AnnouncementFormValues["targetAudience"] = isAdmin
+    ? "all"
+    : "followers_and_rsvps";
+  const audienceOptions = isAdmin
+    ? [
+        { value: "all", label: "All Users" },
+        { value: "attendee", label: "Attendees Only" },
+        { value: "organizer", label: "Organizers Only" },
+      ]
+    : [
+        { value: "followers_and_rsvps", label: "Followers and RSVP Attendees" },
+        { value: "followers", label: "Followers Only" },
+        { value: "rsvps", label: "RSVP Attendees Only" },
+      ];
   
-  // Create Form State
-  const [newTitle, setNewTitle] = useState("");
-  const [newMessage, setNewMessage] = useState("");
-  const [newAudience, setNewAudience] = useState("all");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editMessage, setEditMessage] = useState("");
+
+  const form = useForm<AnnouncementFormValues>({
+    resolver: zodResolver(announcementSchema) as Resolver<AnnouncementFormValues>,
+    defaultValues: {
+      title: "",
+      message: "",
+      targetAudience: defaultTargetAudience,
+    },
+  });
 
   const loadAnnouncements = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -62,31 +107,31 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
     };
   }, [loadAnnouncements]);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle.trim() || !newMessage.trim()) return;
-    
+  async function onSubmit(values: AnnouncementFormValues) {
     try {
-      setIsSubmitting(true);
-      const res = await createAnnouncement(organizerId, newTitle, newMessage, newAudience);
+      const res = await createAnnouncement(organizerId, values, { isAdmin });
       if (res.success) {
-        setNewTitle("");
-        setNewMessage("");
-        setNewAudience("all");
+        form.reset({
+          title: "",
+          message: "",
+          targetAudience: defaultTargetAudience,
+        });
         const nextAnnouncements = await loadAnnouncements();
         if (nextAnnouncements) {
           setAnnouncements(nextAnnouncements);
         }
       } else {
-        alert("Failed to create announcement. Please try again.");
+        form.setError("root", {
+          message: "Failed to create announcement. Please try again.",
+        });
       }
     } catch (error) {
       console.error("Error creating announcement:", error);
-      alert("An error occurred while creating announcement.");
-    } finally {
-      setIsSubmitting(false);
+      form.setError("root", {
+        message: "An error occurred while creating announcement.",
+      });
     }
-  };
+  }
 
   const handleStartEdit = (announcement: AnnouncementData) => {
     setEditingId(announcement.id!);
@@ -101,10 +146,18 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
   };
 
   const handleUpdate = async (id: string) => {
-    if (!editTitle.trim() || !editMessage.trim()) return;
-    
     try {
-      const res = await updateAnnouncement(id, editTitle, editMessage);
+      const validated = announcementSchema.pick({ title: true, message: true }).safeParse({
+        title: editTitle,
+        message: editMessage
+      });
+
+      if (!validated.success) {
+        alert(validated.error.issues[0]?.message || "Invalid input.");
+        return;
+      }
+
+      const res = await updateAnnouncement(id, validated.data);
       if (res.success) {
         setAnnouncements(prev => prev.map(a => 
           a.id === id ? { ...a, title: editTitle, message: editMessage } : a
@@ -144,58 +197,97 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
             <Megaphone className="text-brand-orange" size={24} />
             <div>
               <h2 className="text-xl font-bold text-brand-dark tracking-tight">New Announcement</h2>
-              <p className="text-sm text-slate-500 mt-0.5">Send a message to your attendees</p>
+              <p className="text-sm text-slate-500 mt-0.5">
+                {isAdmin
+                  ? "Send a message across the platform"
+                  : "Send a message to followers and RSVP attendees"}
+              </p>
             </div>
           </div>
           
-          <form onSubmit={handleCreate} className="space-y-5">
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Title</label>
-              <Input
-                placeholder="E.g., Schedule Update for Summer Fest"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                className="bg-white border-slate-300 focus:ring-brand-orange/30 rounded-md transition-colors"
-                required
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-semibold text-slate-700">Title</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="E.g., Schedule Update for Summer Fest"
+                        className="bg-white border-slate-300 focus:ring-brand-orange/30 rounded-md transition-colors"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Target Audience</label>
-              <select 
-                className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-brand-orange/30 transition-colors"
-                value={newAudience}
-                onChange={(e) => setNewAudience(e.target.value)}
-              >
-                <option value="all">All Users</option>
-                <option value="organizer">Organizers Only</option>
-                {!isAdmin && <option value="attendee">Attendees Only</option>}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Message</label>
-              <Textarea 
-                placeholder="Write your announcement here..." 
-                className="resize-y min-h-[160px] bg-white border-slate-300 focus:ring-brand-orange/30 rounded-md text-sm transition-colors"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                required
+
+              <FormField
+                control={form.control}
+                name="targetAudience"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-semibold text-slate-700">Target Audience</FormLabel>
+                    <FormControl>
+                      <select 
+                        className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-brand-orange/30 transition-colors"
+                        {...field}
+                      >
+                        {audienceOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="pt-4 border-t border-slate-100 flex justify-end">
-              <Button 
-                type="submit" 
-                className="w-full bg-brand-dark hover:bg-brand-dark/90 text-white rounded-md px-6 py-2 transition-colors"
-                disabled={isSubmitting || !newTitle.trim() || !newMessage.trim()}
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Publishing...
-                  </span>
-                ) : "Publish Announcement"}
-              </Button>
-            </div>
-          </form>
+
+              <FormField
+                control={form.control}
+                name="message"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-semibold text-slate-700">Message</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Write your announcement here..." 
+                        className="resize-y min-h-[160px] bg-white border-slate-300 focus:ring-brand-orange/30 rounded-md text-sm transition-colors"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {form.formState.errors.root && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-md text-sm">
+                  {form.formState.errors.root.message}
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-slate-100 flex justify-end">
+                <Button 
+                  type="submit" 
+                  className="w-full bg-brand-dark hover:bg-brand-dark/90 text-white rounded-md px-6 py-2 transition-colors"
+                  disabled={form.formState.isSubmitting}
+                >
+                  {form.formState.isSubmitting ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Publishing...
+                    </span>
+                  ) : "Publish Announcement"}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </div>
       </div>
 
@@ -271,7 +363,7 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
                           <div className="flex items-center gap-2 text-xs mt-1">
                             {announcement.targetAudience && announcement.targetAudience !== 'all' && (
                               <span className="bg-brand-orange/10 text-brand-orange px-2 py-0.5 rounded-full font-medium uppercase tracking-wider text-[10px]">
-                                {announcement.targetAudience}s
+                                {formatAudienceLabel(announcement.targetAudience)}
                               </span>
                             )}
                             <div className="flex items-center gap-1.5 text-slate-500">
