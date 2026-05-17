@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Mail, Phone, ExternalLink } from 'lucide-react';
+import { Mail, Phone } from 'lucide-react';
 
 export const Footer = () => {
   return (

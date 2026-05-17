@@ -15,13 +15,21 @@ import {
   X,
   LogIn,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import type { User } from "firebase/auth";
+import type { UserData } from "@/context/AuthContext";
+import type { LucideIcon } from "lucide-react";
 
 interface NavigationProps {
-  user: any;
-  userData: any;
+  user: User | null;
+  userData: UserData | null;
   unreadCount: number;
   handleSignOut: () => Promise<void>;
+}
+
+interface NavLink {
+  href: string;
+  icon: LucideIcon;
+  label: string;
 }
 
 export default function Navigation({
@@ -33,11 +41,13 @@ export default function Navigation({
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const role = userData?.role?.toLowerCase();
+  const [prevPathname, setPrevPathname] = useState(pathname);
 
   // Close mobile menu on route change
-  useEffect(() => {
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setIsOpen(false);
-  }, [pathname]);
+  }
 
   // Prevent scrolling when mobile menu is open
   useEffect(() => {
@@ -126,12 +136,13 @@ export default function Navigation({
       : []),
   ];
 
-  const NavItem = ({ link, mobile = false }: { link: any; mobile?: boolean }) => {
+  const renderNavItem = (link: NavLink, mobile = false) => {
     const Icon = link.icon;
     const isActive = pathname === link.href;
 
     return (
       <Link
+        key={link.href}
         href={link.href}
         className={`flex items-center space-x-3 px-4 py-3 rounded-md transition-all ${isActive
           ? "bg-white/10 text-brand-orange shadow-sm"
@@ -144,12 +155,13 @@ export default function Navigation({
     );
   };
 
-  const NotificationsLink = ({ mobile = false }: { mobile?: boolean }) => {
+  const renderNotificationsLink = (mobile = false) => {
     if (!user) return null;
     const isActive = pathname === "/dashboard/notifications";
 
     return (
       <Link
+        key="notifications"
         href="/dashboard/notifications"
         className={`flex items-center space-x-3 px-4 py-3 rounded-md transition-all ${isActive
           ? "bg-white/10 text-brand-orange shadow-sm"
@@ -197,10 +209,8 @@ export default function Navigation({
       {isOpen && (
         <div className="md:hidden fixed inset-0 z-40 bg-brand-dark flex flex-col p-6 animate-in fade-in slide-in-from-top-4 duration-200">
           <div className="mt-12 flex-1 overflow-y-auto space-y-2">
-            {navLinks.map((link) => (
-              <NavItem key={link.href} link={link} mobile />
-            ))}
-            <NotificationsLink mobile />
+            {navLinks.map((link) => renderNavItem(link, true))}
+            {renderNotificationsLink(true)}
           </div>
 
           <div className="mt-auto pt-6 border-t border-white/10">
@@ -249,10 +259,8 @@ export default function Navigation({
         </div>
 
         <nav className="flex-1 space-y-2">
-          {navLinks.map((link) => (
-            <NavItem key={link.href} link={link} />
-          ))}
-          <NotificationsLink />
+          {navLinks.map((link) => renderNavItem(link, false))}
+          {renderNotificationsLink(false)}
         </nav>
 
         <div className="mt-auto pt-6 border-t border-white/10">

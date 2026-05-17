@@ -64,7 +64,7 @@ export default function UserManagementTable() {
     }
   };
 
-  const executeDeleteUser = async (userId: string, email: string) => {
+  const executeDeleteUser = async (userId: string) => {
     setDeletingId(userId);
     try {
       const res = await deleteUser(userId);
@@ -214,7 +214,7 @@ export default function UserManagementTable() {
                 onClick={() => {
                   const target = deleteConfirmTarget;
                   setDeleteConfirmTarget(null);
-                  executeDeleteUser(target.id, target.email);
+                  executeDeleteUser(target.id);
                 }}
                 className="bg-red-600 hover:bg-red-700 text-white rounded-md px-4 py-2 text-sm font-bold"
               >
