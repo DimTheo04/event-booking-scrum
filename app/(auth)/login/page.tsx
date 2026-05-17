@@ -92,6 +92,13 @@ export default function LoginPage() {
       {/* Brand Panel - Hidden on mobile, visible on desktop */}
       <div className="hidden md:flex md:w-1/2 bg-brand-dark flex-col justify-center p-12 text-white">
         <div className="max-w-lg mx-auto">
+          <div className="mb-8">
+            <Link href="/">
+              <h3 className="text-3xl font-black tracking-tight text-white">
+                GoOut<span className="text-brand-orange">Js</span>
+              </h3>
+            </Link>
+          </div>
           <h1 className="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight leading-tight">
             Welcome <br /> Back.
           </h1>
@@ -105,6 +112,13 @@ export default function LoginPage() {
       <div className="flex flex-1 flex-col items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-md space-y-10 md:p-10 md:bg-white md:rounded-3xl md:shadow-xl md:border md:border-slate-100">
           <div className="space-y-2">
+            <div className="mb-6 md:hidden">
+              <Link href="/">
+                <h3 className="text-2xl font-black text-white tracking-tight">
+                  GoOut<span className="text-brand-orange">Js</span>
+                </h3>
+              </Link>
+            </div>
             <h2 className="text-3xl md:text-4xl font-black text-white md:text-brand-dark tracking-tight">
               Sign In
             </h2>

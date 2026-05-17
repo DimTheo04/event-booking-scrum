@@ -63,6 +63,7 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editMessage, setEditMessage] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const form = useForm<AnnouncementFormValues>({
     resolver: zodResolver(announcementSchema) as Resolver<AnnouncementFormValues>,
@@ -172,9 +173,7 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this announcement?")) return;
-    
+  const executeDelete = async (id: string) => {
     try {
       const res = await deleteAnnouncement(id);
       if (res.success) {
@@ -186,6 +185,10 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
       console.error("Error deleting announcement:", error);
       alert("An error occurred while deleting announcement.");
     }
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setDeleteConfirmId(id);
   };
 
   return (
@@ -386,7 +389,7 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
                           <Button 
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDelete(announcement.id!)}
+                            onClick={() => handleDeleteClick(announcement.id!)}
                             className="h-8 px-2 text-slate-500 hover:text-red-600 hover:bg-red-50 hover:border-red-200"
                             title="Delete"
                           >
@@ -406,6 +409,35 @@ export default function AnnouncementManager({ organizerId, isAdmin = false }: { 
           </div>
         )}
       </div>
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <h4 className="text-xl font-bold text-slate-900">Delete Announcement</h4>
+            <p className="mt-3 text-sm text-slate-500 leading-relaxed">
+              Are you sure you want to delete this announcement? This action cannot be undone.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteConfirmId(null)}
+                className="rounded-md px-4 py-2 text-sm"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  const id = deleteConfirmId;
+                  setDeleteConfirmId(null);
+                  executeDelete(id);
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white rounded-md px-4 py-2 text-sm font-bold"
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

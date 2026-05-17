@@ -180,8 +180,8 @@ export default function Navigation({
       {/* Mobile Top Bar */}
       <header className="md:hidden flex items-center justify-between bg-brand-dark text-white p-4 sticky top-0 z-50 shadow-md">
         <div className="flex items-center space-x-2">
-          <h1 className="text-xl font-extrabold tracking-tight text-white">
-            EventPlatform
+          <h1 className="text-xl font-black tracking-tight text-white">
+            GoOut<span className="text-brand-orange">Js</span>
           </h1>
         </div>
         <button
@@ -238,8 +238,8 @@ export default function Navigation({
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 bg-brand-dark flex-col text-white p-6 shrink-0 overflow-y-auto shadow-xl">
         <div className="mb-10">
-          <h1 className="text-2xl font-extrabold tracking-tight">
-            EventPlatform
+          <h1 className="text-2xl font-black tracking-tight">
+            GoOut<span className="text-brand-orange">Js</span>
           </h1>
           {user && (
             <p className="text-sm text-brand-light mt-1 capitalize">
