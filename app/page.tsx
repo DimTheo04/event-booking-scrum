@@ -15,12 +15,14 @@ export default function Home() {
       <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-12 py-20 md:py-40 flex flex-col md:flex-row items-center flex-1">
         <div className="w-full md:w-3/5 text-center md:text-left space-y-8">
           <div className="space-y-6">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-brand-orange/10 border border-brand-orange/20 text-brand-orange text-xs font-bold uppercase tracking-wider">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-brand-orange/10 border border-brand-orange/20 text-xs font-bold uppercase tracking-wider">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-orange"></span>
               </span>
-              <span>Platform Live</span>
+              <span className="font-black tracking-tight text-white normal-case">
+                GoOut<span className="text-brand-orange">Js</span>
+              </span>
             </div>
 
             <h1 className="text-4xl md:text-8xl font-black text-white tracking-tight leading-[1.1] drop-shadow-sm">
