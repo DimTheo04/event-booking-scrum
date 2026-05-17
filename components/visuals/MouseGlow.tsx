@@ -16,7 +16,9 @@ export const MouseGlow = () => {
   const background = useMotionTemplate`radial-gradient(600px circle at ${isMobile ? '50%' : `${x}px`} ${isMobile ? '50%' : `${y}px`}, rgba(215, 111, 48, 0.15), transparent 80%)`;
 
   useEffect(() => {
-    setIsMobile(window.innerWidth < 768);
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
     
     const handleMouseMove = (e: MouseEvent) => {
       if (window.innerWidth >= 768) {
@@ -26,7 +28,10 @@ export const MouseGlow = () => {
     };
 
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
   }, [mouseX, mouseY]);
 
   return (

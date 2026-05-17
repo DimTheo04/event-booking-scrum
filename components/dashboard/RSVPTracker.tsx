@@ -10,7 +10,6 @@ import {
   Euro,
   Filter,
   MapPin,
-  Sparkles,
   Tag,
   Users,
 } from "lucide-react";

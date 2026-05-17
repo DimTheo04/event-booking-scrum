@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import {
@@ -9,15 +8,11 @@ import {
   CheckCircle2,
   Filter,
   LogIn,
-  LogOut,
   MapPin,
   Search,
   Tag,
-  TicketCheck,
   User as UserIcon,
   Users,
-  Megaphone,
-  PlusCircle,
   UserPlus,
   UserMinus,
 } from "lucide-react";

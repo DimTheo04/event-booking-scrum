@@ -3,7 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import RoleGuard from "@/components/RoleGuard";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Footer } from "@/components/layout/Footer";
@@ -17,7 +17,6 @@ export default function DashboardLayout({
   const { userData, user } = useAuth();
   const { unreadCount } = useNotifications();
   const router = useRouter();
-  const pathname = usePathname();
 
   async function handleSignOut() {
     await signOut(auth);
