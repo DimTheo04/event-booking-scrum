@@ -94,7 +94,7 @@ export default function LoginPage() {
         <div className="max-w-lg mx-auto">
           <div className="mb-8">
             <Link href="/">
-              <h3 className="text-3xl font-black tracking-tight text-white">
+              <h3 className="text-6xl font-black tracking-tight text-white">
                 GoOut<span className="text-brand-orange">Js</span>
               </h3>
             </Link>
@@ -114,7 +114,7 @@ export default function LoginPage() {
           <div className="space-y-2">
             <div className="mb-6 md:hidden">
               <Link href="/">
-                <h3 className="text-2xl font-black text-white tracking-tight">
+                <h3 className="text-4xl font-black text-white tracking-tight">
                   GoOut<span className="text-brand-orange">Js</span>
                 </h3>
               </Link>
