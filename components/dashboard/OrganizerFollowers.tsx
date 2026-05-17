@@ -50,7 +50,7 @@ export default function OrganizerFollowers() {
       {error && <p className="text-red-600">{error}</p>}
 
       {followers.length === 0 && !error ? (
-        <p className="text-slate-500">You don't have any followers yet.</p>
+        <p className="text-slate-500">You don&apos;t have any followers yet.</p>
       ) : (
         <ul className="space-y-4">
           {followers.map((follower) => (

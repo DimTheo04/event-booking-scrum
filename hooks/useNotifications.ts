@@ -19,12 +19,10 @@ interface UseNotificationsReturn {
 export function useNotifications(): UseNotificationsReturn {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [firestoreLoading, setFirestoreLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.uid) {
-      setNotifications([]);
-      setLoading(false);
       return;
     }
 
@@ -44,18 +42,20 @@ export function useNotifications(): UseNotificationsReturn {
         })) as NotificationData[];
 
         setNotifications(data);
-        setLoading(false);
+        setFirestoreLoading(false);
       },
       (error) => {
         console.error("useNotifications snapshot error:", error);
-        setLoading(false);
+        setFirestoreLoading(false);
       }
     );
 
     return () => unsubscribe();
   }, [user?.uid]);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const activeNotifications = user?.uid ? notifications : [];
+  const activeLoading = user?.uid ? firestoreLoading : false;
+  const unreadCount = activeNotifications.filter((n) => !n.read).length;
 
-  return { notifications, unreadCount, loading };
+  return { notifications: activeNotifications, unreadCount, loading: activeLoading };
 }
