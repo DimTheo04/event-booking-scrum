@@ -12,6 +12,7 @@ export default function UserManagementTable() {
   const [searchQuery, setSearchQuery] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{ id: string; email: string } | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -63,11 +64,7 @@ export default function UserManagementTable() {
     }
   };
 
-  const handleDeleteUser = async (userId: string, email: string) => {
-    if (!window.confirm(`Are you sure you want to delete the user ${email}? This action cannot be undone.`)) {
-      return;
-    }
-
+  const executeDeleteUser = async (userId: string, email: string) => {
     setDeletingId(userId);
     try {
       const res = await deleteUser(userId);
@@ -88,6 +85,10 @@ export default function UserManagementTable() {
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const handleDeleteUserClick = (userId: string, email: string) => {
+    setDeleteConfirmTarget({ id: userId, email });
   };
 
   const filteredUsers = users.filter(u => 
@@ -177,7 +178,7 @@ export default function UserManagementTable() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => handleDeleteUser(user.id, user.email)}
+                          onClick={() => handleDeleteUserClick(user.id, user.email)}
                           disabled={updatingId === user.id || deletingId === user.id}
                           className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
                           title="Delete user"
@@ -193,6 +194,36 @@ export default function UserManagementTable() {
           </table>
         </div>
       </div>
+      {deleteConfirmTarget && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <h4 className="text-xl font-bold text-slate-900">Delete User</h4>
+            <p className="mt-3 text-sm text-slate-500 leading-relaxed">
+              Are you sure you want to delete the user <span className="font-semibold text-slate-950">{deleteConfirmTarget.email}</span>? <br /><br />
+              This action cannot be undone and will permanently remove this user account.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteConfirmTarget(null)}
+                className="rounded-md px-4 py-2 text-sm"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  const target = deleteConfirmTarget;
+                  setDeleteConfirmTarget(null);
+                  executeDeleteUser(target.id, target.email);
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white rounded-md px-4 py-2 text-sm font-bold"
+              >
+                Delete User
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

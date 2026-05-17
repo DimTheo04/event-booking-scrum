@@ -159,6 +159,7 @@ export default function EventDetailsModal({
   const [actionError, setActionError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const organizerName =
     organizerInfo?.displayName || event.organizerName || "Organizer";
@@ -213,16 +214,8 @@ export default function EventDetailsModal({
     setIsEditing(false);
   }
 
-  async function handleCancelEvent() {
+  async function executeCancelEvent() {
     if (!onCancelEvent || !canCancel) {
-      return;
-    }
-
-    const confirmed = window.confirm(
-      `Are you sure you want to cancel "${event.title}"?\n\n` +
-        "Your event will stay in the system, but attendees will see it as cancelled."
-    );
-    if (!confirmed) {
       return;
     }
 
@@ -239,6 +232,11 @@ export default function EventDetailsModal({
           "We could not cancel this event right now. Please try again in a moment."
       );
     }
+  }
+
+  function handleCancelEventClick() {
+    if (!canCancel) return;
+    setShowCancelConfirm(true);
   }
 
   return (
@@ -444,7 +442,7 @@ export default function EventDetailsModal({
               <Button
                 type="button"
                 variant="destructive"
-                onClick={handleCancelEvent}
+                onClick={handleCancelEventClick}
                 disabled={isCancelling || !canCancel}
                 className="justify-center"
               >
@@ -555,6 +553,36 @@ export default function EventDetailsModal({
           transform: translateY(-50%);
         }
       `}</style>
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-2xl border border-slate-100 bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <h4 className="text-xl font-bold text-slate-900">Cancel Event</h4>
+            <p className="mt-3 text-sm text-slate-500 leading-relaxed">
+              Are you sure you want to cancel &ldquo;{event.title}&rdquo;? <br /><br />
+              Your event will stay in the system, but attendees will see it as cancelled.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowCancelConfirm(false)}
+              >
+                No, Keep Event
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  setShowCancelConfirm(false);
+                  executeCancelEvent();
+                }}
+              >
+                Yes, Cancel Event
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
