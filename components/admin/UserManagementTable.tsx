@@ -133,7 +133,6 @@ export default function UserManagementTable() {
             <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
               <tr>
                 <th className="px-6 py-4 font-medium">User</th>
-                <th className="px-6 py-4 font-medium">ID</th>
                 <th className="px-6 py-4 font-medium">Role</th>
                 <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
@@ -141,7 +140,7 @@ export default function UserManagementTable() {
             <tbody>
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={3} className="px-6 py-8 text-center text-slate-500">
                     No users found.
                   </td>
                 </tr>
@@ -151,9 +150,6 @@ export default function UserManagementTable() {
                     <td className="px-6 py-4">
                       <div className="font-bold text-brand-dark">{user.displayName || "Unknown"}</div>
                       <div className="text-slate-500 text-xs">{user.email}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <code className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600">{user.id}</code>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
