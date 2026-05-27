@@ -7,6 +7,7 @@ import {
   toggleEventRsvp
 } from '@/lib/services/events';
 import { addDoc, getDoc, updateDoc, getDocs, runTransaction } from 'firebase/firestore';
+import { notifyOrganizerRsvp } from '@/lib/services/notifications';
 
 jest.mock('@/lib/firebase', () => ({
   db: {}
@@ -18,7 +19,7 @@ jest.mock('firebase/firestore', () => ({
   serverTimestamp: jest.fn(() => 'mocked-timestamp'),
   query: jest.fn(),
   where: jest.fn(),
-  doc: jest.fn(),
+  doc: jest.fn(() => 'mocked-doc'),
   getDoc: jest.fn(),
   updateDoc: jest.fn(),
   runTransaction: jest.fn(),
@@ -216,6 +217,216 @@ describe('Event Service - toggleEventRsvp', () => {
     const result = await toggleEventRsvp('event1', 'user1');
     expect(result.success).toBe(false);
     expect(result.message).toBe('This event is no longer available.');
+    consoleSpy.mockRestore();
+  });
+
+  it('should create an RSVP for an attendee when the event is approved, upcoming, and has capacity', async () => {
+    const futureDate = new Date(Date.now() + 86400000).toISOString();
+    let mockTransaction: {
+      get: jest.Mock;
+      set: jest.Mock;
+      update: jest.Mock;
+      delete: jest.Mock;
+    };
+
+    (runTransaction as jest.Mock).mockImplementation(async (_db, callback) => {
+      mockTransaction = {
+        get: jest.fn()
+          .mockResolvedValueOnce({
+            exists: () => true,
+            data: () => ({
+              title: 'Approved Event',
+              organizerId: 'organizer1',
+              status: 'approved',
+              dateTime: futureDate,
+              capacity: 3,
+              rsvpCount: 2,
+            }),
+          })
+          .mockResolvedValueOnce({
+            exists: () => true,
+            data: () => ({ role: 'attendee' }),
+          })
+          .mockResolvedValueOnce({ exists: () => false }),
+        set: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+      };
+
+      return callback(mockTransaction);
+    });
+
+    const result = await toggleEventRsvp('event1', 'user1');
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.rsvped).toBe(true);
+      expect(result.rsvpCount).toBe(3);
+    }
+    expect(mockTransaction!.set).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        userId: 'user1',
+        timestamp: 'mocked-timestamp',
+      })
+    );
+    expect(mockTransaction!.update).toHaveBeenCalledWith(
+      expect.anything(),
+      { rsvpCount: 3 }
+    );
+    expect(notifyOrganizerRsvp).toHaveBeenCalledWith(
+      'organizer1',
+      'event1',
+      'Approved Event'
+    );
+  });
+
+  it('should cancel an existing RSVP and decrement the RSVP count', async () => {
+    let mockTransaction: {
+      get: jest.Mock;
+      set: jest.Mock;
+      update: jest.Mock;
+      delete: jest.Mock;
+    };
+
+    (runTransaction as jest.Mock).mockImplementation(async (_db, callback) => {
+      mockTransaction = {
+        get: jest.fn()
+          .mockResolvedValueOnce({
+            exists: () => true,
+            data: () => ({
+              status: 'approved',
+              dateTime: new Date(Date.now() + 86400000).toISOString(),
+              rsvpCount: 1,
+            }),
+          })
+          .mockResolvedValueOnce({
+            exists: () => true,
+            data: () => ({ role: 'attendee' }),
+          })
+          .mockResolvedValueOnce({ exists: () => true }),
+        set: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+      };
+
+      return callback(mockTransaction);
+    });
+
+    const result = await toggleEventRsvp('event1', 'user1');
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.rsvped).toBe(false);
+      expect(result.rsvpCount).toBe(0);
+    }
+    expect(mockTransaction!.delete).toHaveBeenCalledTimes(1);
+    expect(mockTransaction!.update).toHaveBeenCalledWith(
+      expect.anything(),
+      { rsvpCount: 0 }
+    );
+    expect(notifyOrganizerRsvp).not.toHaveBeenCalled();
+  });
+
+  it('should reject RSVP attempts from non-attendees', async () => {
+    (runTransaction as jest.Mock).mockImplementation(async (_db, callback) => {
+      const mockTransaction = {
+        get: jest.fn()
+          .mockResolvedValueOnce({
+            exists: () => true,
+            data: () => ({
+              status: 'approved',
+              dateTime: new Date(Date.now() + 86400000).toISOString(),
+            }),
+          })
+          .mockResolvedValueOnce({
+            exists: () => true,
+            data: () => ({ role: 'organizer' }),
+          }),
+      };
+
+      return callback(mockTransaction);
+    });
+
+    const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const result = await toggleEventRsvp('event1', 'organizer1');
+
+    expect(result.success).toBe(false);
+    expect(result.message).toBe('Only attendees can RSVP to events.');
+    consoleSpy.mockRestore();
+  });
+
+  it('should reject new RSVPs when the event is full', async () => {
+    (runTransaction as jest.Mock).mockImplementation(async (_db, callback) => {
+      const mockTransaction = {
+        get: jest.fn()
+          .mockResolvedValueOnce({
+            exists: () => true,
+            data: () => ({
+              status: 'approved',
+              dateTime: new Date(Date.now() + 86400000).toISOString(),
+              capacity: 2,
+              rsvpCount: 2,
+            }),
+          })
+          .mockResolvedValueOnce({
+            exists: () => true,
+            data: () => ({ role: 'attendee' }),
+          })
+          .mockResolvedValueOnce({ exists: () => false }),
+        set: jest.fn(),
+        update: jest.fn(),
+      };
+
+      return callback(mockTransaction);
+    });
+
+    const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const result = await toggleEventRsvp('event1', 'user1');
+
+    expect(result.success).toBe(false);
+    expect(result.message).toBe('This event is currently full.');
+    consoleSpy.mockRestore();
+  });
+
+  it('should reject new RSVPs for cancelled, completed, pending, rejected, or past events', async () => {
+    const blockedEvents = [
+      { status: 'cancelled', dateTime: new Date(Date.now() + 86400000).toISOString() },
+      { status: 'completed', dateTime: new Date(Date.now() + 86400000).toISOString() },
+      { status: 'pending', dateTime: new Date(Date.now() + 86400000).toISOString() },
+      { status: 'rejected', dateTime: new Date(Date.now() + 86400000).toISOString() },
+      { status: 'approved', dateTime: new Date(Date.now() - 86400000).toISOString() },
+    ];
+    const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    for (const eventData of blockedEvents) {
+      (runTransaction as jest.Mock).mockImplementationOnce(async (_db, callback) => {
+        const mockTransaction = {
+          get: jest.fn()
+            .mockResolvedValueOnce({
+              exists: () => true,
+              data: () => ({
+                ...eventData,
+                rsvpCount: 0,
+              }),
+            })
+            .mockResolvedValueOnce({
+              exists: () => true,
+              data: () => ({ role: 'attendee' }),
+            })
+            .mockResolvedValueOnce({ exists: () => false }),
+          set: jest.fn(),
+          update: jest.fn(),
+        };
+
+        return callback(mockTransaction);
+      });
+
+      const result = await toggleEventRsvp('event1', 'user1');
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('This event is not accepting new RSVPs.');
+    }
+
     consoleSpy.mockRestore();
   });
 });
