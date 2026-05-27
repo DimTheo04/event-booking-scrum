@@ -2,7 +2,7 @@
 
 Welcome to **GoOutJs**, a premium, high-performance, three-tier Event Booking and Management application built with Next.js (App Router), Tailwind CSS v4, shadcn/ui, and Firebase. 
 
-[![CI Pipeline](https://github.com/USERNAME/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/USERNAME/REPO/actions/workflows/ci.yml)
+[![CI Pipeline](https://github.com/DimTheo04/event-booking-scrum/actions/workflows/ci.yml/badge.svg)](https://github.com/DimTheo04/event-booking-scrum/actions/workflows/ci.yml)
 
 
 ## Table of Contents
@@ -139,12 +139,12 @@ To enforce code standards locally, we utilize **Husky** and **lint-staged**.
 
 ### 3. Automated Testing (Jest)
 We employ **Jest** coupled with React Testing Library for our automated testing strategy.
-*   **Critical Paths Tested**: The test suite covers core business logic, including complex Zod validation schemas (preventing bad data from reaching Firebase) and styling utility functions.
+*   **Critical Paths Tested**: The test suite covers core business logic, including complex Zod validation schemas, RSVP transaction constraints, admin event moderation, follow relationships, announcement filtering, notification targeting, hooks, and UI primitives.
 *   The test suite acts as an automated gatekeeper during both the pre-push local hook and the cloud CI pipeline.
 
 ### 4. CI/CD Pipeline (GitHub Actions)
 Our cloud pipeline ensures a unified source of truth for build success. The pipeline triggers on every push and pull request to `develop` and `main`.
-*   **Stages**: Checkout -> Setup Node.js -> Install Dependencies -> Type Check -> Lint -> Run Tests -> Build.
+*   **Stages**: Checkout -> Secret Scan -> Setup Node.js -> Install Dependencies -> Type Check -> Lint -> Run Tests -> Build.
 *   Commits failing any of these quality gates are automatically rejected.
 
 ### 5. Continuous Deployment (Vercel)
@@ -157,6 +157,7 @@ The application relies on **Vercel** for automatic, serverless Continuous Deploy
 ### 6. Secrets Management
 *   **Local Development**: API keys are securely stored in `.env.local` which is strictly ignored by Git (`.gitignore`).
 *   **Cloud Deployment**: Sensitive keys (like the Firebase Admin Private Key) are securely injected directly into Vercel's Environment Variables dashboard, meaning they are never exposed in the source code or build artifacts.
+*   **Automated Secret Scanning**: GitHub Actions runs Gitleaks on push and pull request builds using `.gitleaks.toml`. The pre-commit hook also runs Gitleaks against staged changes when the CLI is installed locally.
 
 
 ## Local Installation & Setup
