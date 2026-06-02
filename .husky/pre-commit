@@ -1,0 +1,8 @@
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --config .gitleaks.toml --pre-commit --redact --staged --verbose
+else
+  echo "gitleaks not installed; skipping local secret scan"
+fi
+
+npm run typecheck
+npx lint-staged

@@ -29,6 +29,7 @@ export const BackgroundVisuals = () => {
           transition={{ duration: 3, ease: "easeInOut" }}
           className="absolute inset-0 grayscale contrast-125 md:opacity-15"
         >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={backgrounds[index]}
             alt="Event background"

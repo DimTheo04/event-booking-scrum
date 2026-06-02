@@ -1,0 +1,5 @@
+[allowlist]
+description = "Allow documented placeholder credentials in setup docs"
+paths = [
+  '''README\.md''',
+]
