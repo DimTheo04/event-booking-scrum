@@ -2,17 +2,20 @@
 
 Welcome to **GoOutJs**, a premium, high-performance, three-tier Event Booking and Management application built with Next.js (App Router), Tailwind CSS v4, shadcn/ui, and Firebase. 
 
+[![CI Pipeline](https://github.com/DimTheo04/event-booking-scrum/actions/workflows/ci.yml/badge.svg)](https://github.com/DimTheo04/event-booking-scrum/actions/workflows/ci.yml)
+
 
 ## Table of Contents
 1. [Tech Stack](#tech-stack)
 2. [Project Structure](#project-structure)
 3. [Database Schema (Firestore)](#database-schema-firestore)
-4. [Local Installation & Setup](#local-installation--setup)
-5. [Environment Variables Config](#environment-variables-config)
-6. [Creating Your First Admin User](#creating-your-first-admin-user)
-7. [Security & Flow Constraints](#security--flow-constraints)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Operational Commands](#operational-commands)
+4. [CI/CD & DevOps Strategy](#cicd--devops-strategy)
+5. [Local Installation & Setup](#local-installation--setup)
+6. [Environment Variables Config](#environment-variables-config)
+7. [Creating Your First Admin User](#creating-your-first-admin-user)
+8. [Security & Flow Constraints](#security--flow-constraints)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Operational Commands](#operational-commands)
 
 
 ## Tech Stack
@@ -119,6 +122,42 @@ code/
     *   `message` (string): Display text context.
     *   `read` (boolean): `true` if read, else `false`.
     *   `createdAt` (timestamp): Timestamp generated.
+
+
+## CI/CD & DevOps Strategy
+
+### 1. Release Management (Git Flow)
+This project follows a strict **Git Flow** methodology for release management.
+*   **`main` branch**: The production-ready code.
+*   **`develop` branch**: The active integration branch for features.
+All new features are developed in feature branches, pushed to `develop`, and eventually merged into `main` for release.
+
+### 2. Code Quality & Git Hooks (Husky)
+To enforce code standards locally, we utilize **Husky** and **lint-staged**.
+*   **Pre-commit Hook**: Runs ESLint and a strict TypeScript type-check (`tsc --noEmit`) on staged files to ensure no syntax or type errors can be committed.
+*   **Pre-push Hook**: Automatically executes the entire Jest Unit Test suite before code leaves your local machine.
+
+### 3. Automated Testing (Jest)
+We employ **Jest** coupled with React Testing Library for our automated testing strategy.
+*   **Critical Paths Tested**: The test suite covers core business logic, including complex Zod validation schemas, RSVP transaction constraints, admin event moderation, follow relationships, announcement filtering, notification targeting, hooks, and UI primitives.
+*   The test suite acts as an automated gatekeeper during both the pre-push local hook and the cloud CI pipeline.
+
+### 4. CI/CD Pipeline (GitHub Actions)
+Our cloud pipeline ensures a unified source of truth for build success. The pipeline triggers on every push and pull request to `develop` and `main`.
+*   **Stages**: Checkout -> Secret Scan -> Setup Node.js -> Install Dependencies -> Type Check -> Lint -> Run Tests -> Build.
+*   Commits failing any of these quality gates are automatically rejected.
+
+### 5. Continuous Deployment (Vercel)
+The application relies on **Vercel** for automatic, serverless Continuous Deployment.
+1. Connect your GitHub repository to a Vercel project.
+2. Vercel automatically creates a production deployment every time code is merged into the `main` branch.
+3. Vercel automatically manages HTTPS, CDN caching, and edge routing.
+*Note: We do not require a separate Docker Image because Vercel natively handles the Next.js build output and deployment architecture.*
+
+### 6. Secrets Management
+*   **Local Development**: API keys are securely stored in `.env.local` which is strictly ignored by Git (`.gitignore`).
+*   **Cloud Deployment**: Sensitive keys (like the Firebase Admin Private Key) are securely injected directly into Vercel's Environment Variables dashboard, meaning they are never exposed in the source code or build artifacts.
+*   **Automated Secret Scanning**: GitHub Actions runs Gitleaks on push and pull request builds using `.gitleaks.toml`. The pre-commit hook also runs Gitleaks against staged changes when the CLI is installed locally.
 
 
 ## Local Installation & Setup
